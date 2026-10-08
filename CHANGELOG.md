@@ -42,7 +42,10 @@ First release candidate. **Not yet validated against live Notion/ClickUp workspa
   files, 582 tests. The same suite also passes on Node 22.13.0.
 - `pnpm test:e2e` (Chromium): 28 tests passed.
 - Secret scan clean; `pnpm audit`: no known vulnerabilities.
-- **Not done:** any run against live Notion/ClickUp; the GitHub Actions matrix (no remote yet).
+- GitHub Actions (Ubuntu Node 22 and 24, macOS Node 22, dashboard browser job): passed. The first run
+  had failed in lint because `apps/web` and `e2e` lacked a TypeScript project reference to
+  `@exitos/core`; fixed.
+- **Not done:** any run against live Notion/ClickUp; Windows.
 
 ### Known limitations
 

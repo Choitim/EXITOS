@@ -79,16 +79,23 @@ other than Notion → ClickUp. Details: [finding codes](finding-codes.md) and th
 Recorded on 2026-10-08 from a local run on macOS (Apple silicon). The numbers are the output of the
 commands shown, not estimates.
 
-| Check                                                         | Command                          | Result                                                                                                       |
-| ------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Format, lint, strict typecheck, unit/integration tests, build | `pnpm check`                     | passed — **33 test files, 582 tests, 0 failures** (about 13 s)                                               |
-| Same test suite on the minimum supported Node                 | Node 22.13.0                     | passed — 33 files, 582 tests; the offline demo also runs with an empty stderr                                |
-| Dashboard browser tests (Chromium)                            | `pnpm test:e2e`                  | passed — **28 tests** (about 8 s)                                                                            |
-| Secret scan                                                   | `node scripts/check-secrets.mjs` | no credential-shaped strings (tests, e2e files and the lockfile are excluded by design)                      |
-| Dependency audit                                              | `pnpm audit`                     | no known vulnerabilities                                                                                     |
-| Node versions exercised                                       | local                            | 22.13.0 and 26.0.0. The CI matrix (Node 22 and 24, Ubuntu and macOS) **has not run yet**: there is no remote |
+| Check                                                         | Command                          | Result                                                                                             |
+| ------------------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Format, lint, strict typecheck, unit/integration tests, build | `pnpm check`                     | passed — **33 test files, 582 tests, 0 failures** (about 13 s)                                     |
+| Same test suite on the minimum supported Node                 | Node 22.13.0                     | passed — 33 files, 582 tests; the offline demo also runs with an empty stderr                      |
+| Dashboard browser tests (Chromium)                            | `pnpm test:e2e`                  | passed — **28 tests** (about 8 s)                                                                  |
+| Secret scan                                                   | `node scripts/check-secrets.mjs` | no credential-shaped strings (tests, e2e files and the lockfile are excluded by design)            |
+| Dependency audit                                              | `pnpm audit`                     | no known vulnerabilities                                                                           |
+| Node versions exercised, locally                              | local                            | 22.13.0 and 26.0.0                                                                                 |
+| GitHub Actions on the pre-release commit                      | CI workflow                      | passed — Ubuntu Node 22, Ubuntu Node 24, macOS Node 22 and the dashboard browser job (4 of 4 jobs) |
 
-What these results do **not** show: any run against live Notion or ClickUp, Windows, or Node 24.
+The first GitHub Actions run failed in the lint step: `apps/web` and `e2e` did not declare a TypeScript
+project reference to `@exitos/core`, so on a clean checkout (no `dist/` yet) the linter could not
+resolve its types (it passed locally only because `dist/` already existed). Both now declare the
+reference; the run that passed is
+[this one](https://github.com/Choitim/EXITOS/actions/runs/37827840545).
+
+What these results do **not** show: any run against live Notion or ClickUp, or on Windows.
 Mocked and fake-API tests demonstrate the engine's behaviour against the documented API contracts; they
 are not evidence that a real migration works.
 

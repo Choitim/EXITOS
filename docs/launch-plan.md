@@ -1,7 +1,8 @@
 # Launch plan
 
-> Nothing here has been executed. **No repository has been made public, nothing has been published,
-> and no post has been sent.** These are drafts for the maintainer to review, edit and send
+> The launch steps below have **not** been executed: **no post has been sent, no package has been
+> published and no release has been tagged.** (The source is on GitHub as a pre-release candidate;
+> that is the only thing that is public.) These are drafts for the maintainer to review, edit and send
 > themselves. Do not automate stars, fake users, mass unsolicited messages, or fabricate adoption.
 
 ## Preconditions (do not launch before these)
