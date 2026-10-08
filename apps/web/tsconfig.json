@@ -16,5 +16,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src", "test", "vite.config.ts"]
+  "include": ["src", "test", "vite.config.ts"],
+  "references": [{ "path": "../../packages/core" }]
 }
