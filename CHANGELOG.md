@@ -32,16 +32,40 @@ First release candidate. **Not yet validated against live Notion/ClickUp workspa
   preserved; a run is "verified" only after verification passes.
 - Local read-only dashboard with seven sections; strict CSP; loopback only.
 - Connector SDK (`@exitos/core/sdk`), conformance kit (`@exitos/core/testing`), example connector.
-- Documentation: product spec, architecture, 12 ADRs, API verification record, competitive landscape,
+- Documentation: product spec, architecture, 13 ADRs, API verification record, competitive landscape,
   reliability model, security review, finding-code reference, live sandbox guide, launch plan, market
-  thesis hypotheses.
+  thesis hypotheses, and an honest [enterprise-readiness assessment](docs/enterprise-readiness.md).
+- **Corporate networks:** `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` support (via `undici`, process
+  environment only, credentials never printed) and `NODE_EXTRA_CA_CERTS` guidance
+  ([ADR 0013](docs/decisions/0013-proxy-support-via-undici.md)).
+- Network failures now name the real cause (proxy refused, DNS, untrusted certificate) and what to
+  check, instead of a bare "fetch failed".
+- **Supply-chain and quality gates in CI:** production licence allow-list (`pnpm check:licenses`),
+  CycloneDX SBOM (`pnpm sbom:generate`), coverage with an enforced floor (`pnpm test:coverage`), CodeQL,
+  dependency review on pull requests, `CODEOWNERS`.
+- Tests that pin the safety-critical "adopt, re-send or stop and ask" branches of reconciliation, and an
+  opt-in scale test (`EXITOS_SCALE=1`).
+
+### Fixed
+
+- **Quadratic work on large migrations:** several places copied an array on every iteration while
+  grouping actions (verification, planning, the executor's dependency index) and the time-zone check built
+  an `Intl.DateTimeFormat` for every row. At 100 000 rows (against fakes) verification dropped from about
+  19 s to 10 s. The in-process fake Notion API had the same pattern, which had inflated early
+  measurements.
+- CI failed on a clean checkout: `apps/web` and `e2e` lacked a TypeScript project reference to
+  `@exitos/core`, so the linter could not resolve its types until `dist/` existed.
 
 ### Verification of this candidate (2026-10-08, local)
 
-- `pnpm check` (format, lint, strict typecheck incl. the dashboard, tests, build): passed — 33 test
-  files, 582 tests. The same suite also passes on Node 22.13.0.
+- `pnpm check` (format, lint, strict typecheck incl. the dashboard, tests, build): passed — 38 test
+  files, 628 tests (plus one opt-in scale test, skipped by default). The same suite also passes on
+  Node 22.13.0.
+- `pnpm test:coverage`: 88.2 % statements, 76.1 % branches, 89.5 % functions, 89.7 % lines (floor
+  enforced).
 - `pnpm test:e2e` (Chromium): 28 tests passed.
-- Secret scan clean; `pnpm audit`: no known vulnerabilities.
+- Secret scan clean; `pnpm check:licenses`: 8 production dependencies, all MIT or ISC; `pnpm audit`: no
+  known vulnerabilities.
 - GitHub Actions (Ubuntu Node 22 and 24, macOS Node 22, dashboard browser job): passed. The first run
   had failed in lint because `apps/web` and `e2e` lacked a TypeScript project reference to
   `@exitos/core`; fixed.

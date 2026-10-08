@@ -46,3 +46,11 @@ APIs"** — nothing here has been run against real Notion/ClickUp workspaces by 
 - ✅ Launch plan, market thesis, [release notes draft](release-notes-v0.1.0.md)
 - ✅ Lint + typecheck + test + build, with real results recorded in [release-notes-v0.1.0.md](release-notes-v0.1.0.md)
 - ⬜ **Live validation against real Notion/ClickUp test workspaces** — not done; required before a responsible public release
+
+## Phase 5 — Enterprise hardening ([enterprise-readiness.md](enterprise-readiness.md))
+
+- ✅ Corporate proxy and custom-CA support; network failures that name their cause ([ADR 0013](decisions/0013-proxy-support-via-undici.md))
+- ✅ Licence allow-list, SBOM, coverage floor, CodeQL, dependency review, `CODEOWNERS` in CI
+- ✅ Tests pinning the reconciliation branches that must refuse to guess
+- ✅ Scale measured to 100 000 rows under fakes; quadratic work found and removed
+- ⬜ Independent security review · signed releases with provenance · Windows support · attachment transfer · streaming extraction · a support commitment

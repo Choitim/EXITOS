@@ -23,6 +23,11 @@ Other useful commands: `pnpm test:watch` · `pnpm test:e2e` (dashboard, needs
 `pnpm exec playwright install chromium`) · `pnpm docs:assets` (regenerate the README demo image) ·
 `pnpm clean`.
 
+Quality gates CI also runs, and you can run locally: `pnpm test:coverage` (fails below the coverage
+floor) · `pnpm check:licenses` (production dependencies must be on the licence allow-list) ·
+`pnpm sbom:generate` (CycloneDX SBOM into `sbom/`) · `pnpm check:secrets`. An opt-in scale check:
+`EXITOS_SCALE=1 EXITOS_SCALE_ROWS=20000 pnpm exec vitest run packages/connector-clickup/test/scale.test.ts --reporter=verbose`.
+
 ## Repository tour
 
 | Path                         | What lives there                                                                       |

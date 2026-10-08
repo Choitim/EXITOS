@@ -60,6 +60,16 @@ pnpm exitos ui --demo     # the same run in the local, read-only dashboard
   verification passes.
 - Reports in terminal, Markdown and JSON (with `--redact` for sharing).
 
+**Corporate environments**
+
+- Works behind an HTTP(S) proxy (`HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY`) and with a company root
+  certificate (`NODE_EXTRA_CA_CERTS`); credentials are never printed, and network failures name the real
+  cause. Tested against local stand-ins, **not** against a real corporate proxy.
+- No telemetry; only `api.notion.com` and `api.clickup.com` are ever contacted.
+- Supply-chain gates in CI: licence allow-list, SBOM, `pnpm audit`, CodeQL, dependency review.
+- An honest self-assessment, including what blocks calling it enterprise-ready:
+  [enterprise-readiness.md](enterprise-readiness.md).
+
 **Interfaces and extensibility**
 
 - CLI: `demo`, `inspect`, `plan`, `apply`, `status`, `resume`, `verify`, `report`, `ui`, `connectors`.
@@ -79,15 +89,17 @@ other than Notion → ClickUp. Details: [finding codes](finding-codes.md) and th
 Recorded on 2026-10-08 from a local run on macOS (Apple silicon). The numbers are the output of the
 commands shown, not estimates.
 
-| Check                                                         | Command                          | Result                                                                                             |
-| ------------------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Format, lint, strict typecheck, unit/integration tests, build | `pnpm check`                     | passed — **33 test files, 582 tests, 0 failures** (about 13 s)                                     |
-| Same test suite on the minimum supported Node                 | Node 22.13.0                     | passed — 33 files, 582 tests; the offline demo also runs with an empty stderr                      |
-| Dashboard browser tests (Chromium)                            | `pnpm test:e2e`                  | passed — **28 tests** (about 8 s)                                                                  |
-| Secret scan                                                   | `node scripts/check-secrets.mjs` | no credential-shaped strings (tests, e2e files and the lockfile are excluded by design)            |
-| Dependency audit                                              | `pnpm audit`                     | no known vulnerabilities                                                                           |
-| Node versions exercised, locally                              | local                            | 22.13.0 and 26.0.0                                                                                 |
-| GitHub Actions on the pre-release commit                      | CI workflow                      | passed — Ubuntu Node 22, Ubuntu Node 24, macOS Node 22 and the dashboard browser job (4 of 4 jobs) |
+| Check                                                         | Command                          | Result                                                                                                   |
+| ------------------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Format, lint, strict typecheck, unit/integration tests, build | `pnpm check`                     | passed — **38 test files, 628 tests, 0 failures** (about 13 s; one opt-in scale test is skipped)         |
+| Same test suite on the minimum supported Node                 | Node 22.13.0                     | passed — 38 files, 628 tests, including the proxy tests; the offline demo also runs with an empty stderr |
+| Coverage, with an enforced floor                              | `pnpm test:coverage`             | 88.2 % statements, 76.1 % branches, 89.5 % functions, 89.7 % lines                                       |
+| Dashboard browser tests (Chromium)                            | `pnpm test:e2e`                  | passed — **28 tests** (about 8 s)                                                                        |
+| Secret scan                                                   | `node scripts/check-secrets.mjs` | no credential-shaped strings (tests, e2e files and the lockfile are excluded by design)                  |
+| Dependency audit                                              | `pnpm audit`                     | no known vulnerabilities                                                                                 |
+| Licence allow-list                                            | `pnpm check:licenses`            | 8 production dependencies, all MIT (7) or ISC (1)                                                        |
+| Node versions exercised, locally                              | local                            | 22.13.0 and 26.0.0                                                                                       |
+| GitHub Actions on the pre-release commit                      | CI workflow                      | passed — Ubuntu Node 22, Ubuntu Node 24, macOS Node 22 and the dashboard browser job (4 of 4 jobs)       |
 
 The first GitHub Actions run failed in the lint step: `apps/web` and `e2e` did not declare a TypeScript
 project reference to `@exitos/core`, so on a clean checkout (no `dist/` yet) the linter could not

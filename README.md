@@ -70,6 +70,11 @@ pnpm exitos report --format markdown --out report.md   # add --redact before sha
 
 Other commands: `status` · `resume` · `ui` · `connectors`. Run `pnpm exitos --help`.
 
+**Behind a corporate proxy?** Set the standard variables before running: `HTTPS_PROXY`
+(`http://user:password@host:port`), `NO_PROXY` for hosts that must skip it, and `NODE_EXTRA_CA_CERTS`
+if your proxy inspects HTTPS. Credentials are never printed. ExitOS contacts exactly two hosts,
+`api.notion.com` and `api.clickup.com`. Details: [enterprise readiness](docs/enterprise-readiness.md).
+
 ## Example output
 
 ```text
@@ -138,11 +143,30 @@ inspect  →  plan  →  approve  →  apply  →  verify  →  report
 - **Verified or not complete.** `applied` ≠ `verified`; only a passing `verify` completes a run.
 - **No secrets on disk.** Tokens come from the environment; they are redacted from output and never
   written to plans, state or reports.
+- **No telemetry.** Nothing is sent anywhere except to the two APIs you configure; there is no
+  analytics code. State and plans stay in a local `0700` directory with `0600` files.
 - **People are never guessed.** Notion and ClickUp user ids are unrelated; assignment is opt-in via an
   explicit map (ClickUp notifies assignees of API-created tasks).
 
 Details: [reliability model](docs/reliability.md) (what is and is **not** guaranteed — exactly-once is
 not claimed) · [security review](docs/security-review.md) · [SECURITY.md](SECURITY.md).
+
+## Enterprise readiness
+
+ExitOS is built to be evaluated by a company, but it is **not yet enterprise-ready**: nobody has run it
+against live Notion or ClickUp, and it has had no independent security review. The
+[full self-assessment](docs/enterprise-readiness.md) gives the evidence and the gaps for every area.
+In short:
+
+| Area                  |     | State                                                                                                                              |
+| --------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Safe by construction  | ✅  | Read-only source, nothing deleted or overwritten, approval by plan id, verification, no telemetry.                                 |
+| Corporate networks    | ✅  | Proxy, `NO_PROXY` and custom-CA support, tested against a real local proxy (not yet a real corporate one).                         |
+| Supply chain          | ✅  | 5 third-party runtime packages, all MIT/ISC; license allow-list, SBOM, `pnpm audit`, CodeQL and dependency review run in CI.       |
+| Tests                 | ✅  | 628 tests plus 28 browser tests; 88 % statement coverage with an enforced floor. Safety-critical tests are mutation-checked.       |
+| Scale                 | 🟡  | Measured to 100 000 rows under fakes (about 2.7 GB of memory); a real run is paced by the destination's rate limit, not by ExitOS. |
+| Live validation       | ❌  | Never run against real Notion or ClickUp. This is the main blocker.                                                                |
+| Assurance and support | ❌  | No independent audit, signed releases, Windows support, SSO/roles or support commitment.                                           |
 
 ## Architecture
 
@@ -171,7 +195,9 @@ tested template. Guide: [docs/connector-sdk.md](docs/connector-sdk.md).
 ## Project status and checks
 
 `pnpm check` runs formatting, lint, strict typecheck, tests and build; CI runs them on Node 22 and 24
-(plus the dashboard browser test). Results of the last full local run are recorded in
+and macOS, plus the dashboard browser test, a license allow-list (`pnpm check:licenses`), coverage with a
+floor (`pnpm test:coverage`), an SBOM (`pnpm sbom:generate`), `pnpm audit`, CodeQL, and a dependency
+review on pull requests. Results of the last full local run are recorded in
 [CHANGELOG.md](CHANGELOG.md) and the release notes — not inflated, and not a substitute for live
 validation. Documentation tests keep these docs honest (every finding code documented, every link and
 CLI command real).

@@ -48,6 +48,13 @@ untrusted input`.
 - **Write containment.** `apply` is the only code path that holds a read-write connection. Writes are
   limited to four ClickUp endpoints; everything else (including `DELETE`, `PUT`, task updates) is
   classified `unknown` and blocked even in read-write mode.
+- **Outbound proxy.** `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` are read from the process environment
+  only (never `.env`, so a shared file cannot redirect traffic). Proxy credentials are never printed:
+  messages name `scheme://host:port` only, malformed values are rejected without being echoed, and
+  only `http`/`https` proxy URLs are accepted ([ADR 0013](decisions/0013-proxy-support-via-undici.md)).
+  The allowed-host guard sits above the transport, so a proxy cannot widen where a token may go.
+  Network failures are explained by `describeNetworkFailure`, which redacts and bounds what it prints.
+  Tests: `apps/cli/test/proxy.test.ts`, `spawn-proxy.test.ts`, `packages/shared/test/diagnose.test.ts`.
 - **Local dashboard.** Binds `127.0.0.1`, rejects foreign `Host` headers (DNS rebinding), serves only
   `GET`/`HEAD`, normalises and confines static paths, sends a strict CSP, and exposes one JSON document
   built from a **read-only** SQLite handle. It never reads environment variables or credentials.
@@ -70,12 +77,24 @@ untrusted input`.
 - The ClickUp personal token acts as you and has write access to everything you can write to;
   ExitOS limits itself to four endpoints, but the token itself is not scoped.
 - The dashboard shows your plan content to anyone who can open `127.0.0.1:<port>` on your machine.
+- A proxy that inspects TLS and whose CA you trust through `NODE_EXTRA_CA_CERTS` can read the tokens
+  and content in transit. That is your organisation's decision; without it, an HTTPS proxy only sees
+  the destination host (the tunnel is end to end).
+- With an `http://` proxy URL, the proxy credentials travel unencrypted between ExitOS and the proxy.
+  Use an `https://` proxy URL or a trusted network. NTLM/Kerberos proxy authentication and PAC files
+  are not supported.
 - Live behaviour of the two APIs is unverified ([live-sandbox-testing.md](live-sandbox-testing.md)).
 
 ## Supply chain
 
-- Production dependencies are few: `zod`, `yaml`, `@notionhq/client`, `commander` (CLI), `react` and
-  `react-dom` (dashboard). Everything else is build/test tooling.
+- Production dependencies are few: `zod`, `yaml`, `@notionhq/client`, `commander` and `undici` (proxy
+  support) in the CLI, plus `react`, `react-dom` and its `scheduler` compiled into the dashboard's static
+  files. Everything else is build/test tooling. All are MIT or ISC; `pnpm check:licenses` fails CI if any
+  production dependency (direct or transitive) leaves an allow-list (MIT, ISC, Apache-2.0, BSD,
+  0BSD, BlueOak, CC0, Unlicense), so a copyleft licence cannot arrive unnoticed.
+- `pnpm sbom:generate` writes a CycloneDX SBOM of what the CLI ships; CI uploads it as an artifact.
+- CodeQL (weekly and on every push and pull request) and a dependency review on pull requests
+  (fails on high-severity advisories) run in GitHub Actions; coverage has an enforced floor.
 - `pnpm audit` on 2026-10-08: **no known vulnerabilities**. CI re-runs it, and Dependabot is enabled.
 - pnpm 12 enforces a **minimum release age** (24 hours by default) on new dependency versions, and
   this repository keeps it **enforced with no exclusions**. When the newest `vite` (8.3.4) and
@@ -83,7 +102,9 @@ untrusted input`.
   (`vite` 8.3.3, `@playwright/test` ^1.63.0) instead of being excluded. Dependabot will propose the
   newer versions once they have aged.
 - The lockfile belongs in the repository; CI installs with `--frozen-lockfile`.
-- Releases are not published by this repository's CI in v0.1 (no publishing credentials exist).
+- Releases are not published by this repository's CI in v0.1 (no publishing credentials exist), so
+  there are no signed artifacts or build provenance yet. GitHub Actions are pinned to major-version
+  tags, not commit hashes; Dependabot proposes the updates.
 
 ## Reporting
 
