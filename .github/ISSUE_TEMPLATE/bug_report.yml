@@ -1,0 +1,59 @@
+name: Bug report
+description: Something behaves differently from the docs, or a migration lost something it should have reported
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste tokens, `.env`, plan files or unredacted reports.** Use `exitos report --redact`.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you see instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Ideally with `exitos demo` or a synthetic fixture.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ExitOS version
+      description: Output of `exitos --version`
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version and OS
+      placeholder: 'v22.13.0, macOS 15'
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Where did it happen?
+      options:
+        - Offline demo
+        - Mocked / test environment
+        - Live Notion + ClickUp workspaces
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Redacted report or relevant output
+      description: '`exitos report --redact --format markdown` (safe to share). Remove anything you consider private.'
+      render: markdown
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: I removed tokens, ids and private content from everything I pasted
+          required: true

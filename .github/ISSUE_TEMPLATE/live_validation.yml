@@ -1,0 +1,47 @@
+name: Live validation result
+description: Report the result of following docs/live-sandbox-testing.md on your own test workspaces
+labels: [validation]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you — this is the most valuable contribution right now. **Use test workspaces you own.**
+        Attach only `exitos report --redact` output. Never attach plan files or `.env`.
+  - type: input
+    id: version
+    attributes:
+      label: ExitOS version / commit
+    validations:
+      required: true
+  - type: input
+    id: plans
+    attributes:
+      label: Notion plan and ClickUp plan
+      placeholder: 'Notion Plus · ClickUp Free Forever'
+  - type: textarea
+    id: scope
+    attributes:
+      label: What did you migrate?
+      description: Rows, property types, page content types, relations, Docs?
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Everything matched the plan and ClickUp looked right
+        - Verified, but something looked wrong in ClickUp
+        - Verification failed
+        - The run stopped or errored
+    validations:
+      required: true
+  - type: textarea
+    id: surprises
+    attributes:
+      label: Where did the real APIs differ from the docs (or from ExitOS's expectations)?
+  - type: textarea
+    id: report
+    attributes:
+      label: Redacted report
+      render: markdown

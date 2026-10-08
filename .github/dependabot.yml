@@ -1,0 +1,37 @@
+version: 2
+updates:
+  # pnpm lockfiles are handled by the "npm" ecosystem.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 8
+    groups:
+      dev-tooling:
+        patterns:
+          [
+            eslint*,
+            typescript-eslint,
+            prettier,
+            vitest,
+            '@vitest/*',
+            '@playwright/*',
+            playwright*,
+            '@eslint/*',
+          ]
+        update-types: [minor, patch]
+      web:
+        patterns:
+          [react, react-dom, vite, '@vitejs/*', tailwindcss, '@tailwindcss/*', '@types/react*']
+        update-types: [minor, patch]
+    ignore:
+      # typescript-eslint does not yet support TypeScript 7 (see docs/decisions/0002-typescript-6-toolchain-pin.md).
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+    labels: [dependencies]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies, ci]

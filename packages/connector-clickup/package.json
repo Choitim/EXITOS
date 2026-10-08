@@ -1,0 +1,34 @@
+{
+  "name": "@exitos/connector-clickup",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ExitOS destination connector for ClickUp (API v2 tasks, v3 Docs). Plans, applies, reconciles and verifies.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@exitos/core": "workspace:*",
+    "@exitos/shared": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@exitos/connector-notion": "workspace:*"
+  }
+}

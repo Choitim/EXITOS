@@ -1,0 +1,34 @@
+# dependencies & build output
+node_modules/
+dist/
+dist-test/
+*.tsbuildinfo
+coverage/
+
+# secrets — never commit
+.env
+.env.*
+!.env.example
+
+# local ExitOS state, plans and reports contain YOUR content (and never credentials)
+.exitos/
+migration-plan*.json
+migration-report*.json
+migration-report*.md
+*.plan.json
+exitos-report*
+
+# test tooling output
+playwright-report/
+test-results/
+blob-report/
+
+# editors & OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+
+# Local test-runner artifacts
+.vitest/

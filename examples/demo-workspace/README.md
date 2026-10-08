@@ -1,0 +1,17 @@
+# Demo workspace (synthetic)
+
+Everything in this package is **invented**: the Notion workspace, the ClickUp Workspace, the people,
+the e-mail addresses (reserved `example.com`), the URLs and the text. It contains no real data and
+makes no network requests.
+
+It exists so that `exitos demo` can run the _real_ Notion and ClickUp connectors against realistic,
+API-shaped data without credentials. See [ADR 0008](../../docs/decisions/0008-demo-runs-real-connectors-on-fakes.md).
+
+| Piece                                       | What it demonstrates                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Product Roadmap` (28 rows)                 | statuses that match and don't, priorities, date-only / date-time / range / time-zone dates, people (mapped and unmapped), tags (existing and missing), Custom Fields, relations (incl. one to an item outside the migration), formula/rollup/unique-id/button properties, attachments (hosted and external), Unicode titles |
+| One "kitchen sink" page body                | every block type, so the report shows each kind of loss                                                                                                                                                                                                                                                                     |
+| `Bug Tracker` (130 rows)                    | pagination beyond 100 items, rate-limit pacing                                                                                                                                                                                                                                                                              |
+| `Engineering Handbook` (5 pages)            | pages → ClickUp Docs with nesting (experimental)                                                                                                                                                                                                                                                                            |
+| One locked page and one lost synced block   | permission findings                                                                                                                                                                                                                                                                                                         |
+| Existing ClickUp task with a colliding name | the "never overwrite" warning                                                                                                                                                                                                                                                                                               |

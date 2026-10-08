@@ -1,0 +1,90 @@
+# ExitOS migration configuration — Notion → ClickUp.
+#
+# Copy to migration.yaml and fill in YOUR ids.   exitos plan notion clickup --config migration.yaml
+#
+# This file must NOT contain credentials. Tokens come from the environment (see .env.example);
+# ExitOS refuses a config that has keys like "token" or "apiKey".
+
+version: 1
+
+# ─── Where to read from ──────────────────────────────────────────────────────────────────────────
+source:
+  type: notion
+  # notionVersion: "2026-03-11"      # default; the connector accepts older response shapes too
+  # requestsPerMinute: 150           # Notion allows ~180/min (3/s) on most plans, 600 on Business+
+
+  # Data sources (databases) to migrate as tasks. Paste an id or a Notion URL.
+  # A *database* id works too: all of its data sources are used.
+  # Run `exitos inspect notion` to see what your connection can see.
+  dataSources:
+    - id: '00000000000000000000000000000000' # ← replace
+      name: Product Roadmap # label for humans; never trusted
+      bodies: true # also read each row's page content → task description
+
+  # Standalone pages to migrate as ClickUp Docs (EXPERIMENTAL — also needs options.experimental.docs).
+  # pages:
+  #   - id: "00000000000000000000000000000000"
+  #     includeChildPages: true
+
+  # limits:                                    # safety valves; reaching one is reported, never silent
+  #   maxBlockDepth: 8
+  #   maxBlocksPerPage: 5000
+  #   maxRecordsPerDataSource: 50000
+  #   maxPages: 2000
+
+# ─── Where to write ──────────────────────────────────────────────────────────────────────────────
+destination:
+  type: clickup
+  workspaceId: '0000000' # ← ClickUp "team" id. `exitos inspect clickup` lists it.
+  # requestsPerMinute: 90                      # ClickUp allows 100/min on Free/Unlimited/Business
+
+  lists:
+    - source: Product Roadmap # the data source's id or its exact title
+      listId: '000000000' # ← the ClickUp List to create tasks in
+      relations: link # link = relations become linked tasks; skip = keep as text
+
+      # How properties map. Anything you do not mention is inferred and shown in the plan.
+      # Property names are as they appear in Notion.
+      fields:
+        Status:
+          to: status
+          valueMap: # Notion option → an EXISTING ClickUp status (case-insensitive)
+            Not started: to do
+            In progress: in progress
+            Done: complete
+        Priority:
+          to: priority
+          valueMap: { Urgent: 1, High: 2, Medium: 3, Low: 4 } # ClickUp: 1 urgent … 4 low
+        Due: { to: due_date } # a date range sets start AND due date
+        Owner: { to: assignees } # only people you map under `users:` are assigned
+        Tags: { to: tags } # only tags that ALREADY exist in the ClickUp Space
+        'Story points': { to: custom_field, field: Story points } # an EXISTING custom field (name or id)
+        # Internal notes: { to: skip }         # explicitly leave a property behind (it is still reported)
+
+  # docs:                                      # for the experimental page → Doc migration
+  #   parent: { type: space, id: "00000000" }  # space | folder | list | everything | workspace
+  #   visibility: PRIVATE
+
+# ─── People ──────────────────────────────────────────────────────────────────────────────────────
+# Notion user ids are unrelated to ClickUp user ids, so nothing is assumed. ClickUp NOTIFIES
+# assignees of API-created tasks: map people only when you want that.
+users:
+  matchByEmail:
+    false # true = also match people by exact e-mail (needs the
+    #        Notion "Read user information" capability)
+  unmapped: description # description = keep unmapped names as text · ignore
+  map:
+    # "<notion user id or e-mail>": <clickup user id>
+    # "ada@example.com": 1001
+
+# ─── Behaviour ───────────────────────────────────────────────────────────────────────────────────
+options:
+  timezone: UTC # IANA zone for date-only and "floating" date-times
+  provenance:
+    footer # footer = visible marker that makes retries safe
+    # none   = cleaner tasks, weaker duplicate protection
+  unmappedFields: description # description = keep as a table · skip = drop (and report)
+  unsupportedBlocks: placeholder # placeholder = visible note · omit = drop (and report)
+  concurrency: 4 # parallel writes (1–16)
+  experimental:
+    docs: false # Notion pages → ClickUp Docs. Not live-validated.

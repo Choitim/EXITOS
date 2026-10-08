@@ -1,0 +1,44 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/shared"
+    },
+    {
+      "path": "packages/shared/test"
+    },
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/core/test"
+    },
+    {
+      "path": "packages/connector-notion"
+    },
+    {
+      "path": "packages/connector-notion/test"
+    },
+    {
+      "path": "packages/connector-clickup"
+    },
+    {
+      "path": "packages/connector-clickup/test"
+    },
+    {
+      "path": "examples/demo-workspace"
+    },
+    {
+      "path": "apps/cli"
+    },
+    {
+      "path": "apps/cli/test"
+    },
+    {
+      "path": "examples/example-connector"
+    },
+    {
+      "path": "examples/example-connector/test"
+    }
+  ]
+}

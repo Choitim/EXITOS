@@ -1,0 +1,32 @@
+{
+  "name": "@exitos/connector-notion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ExitOS source connector for Notion (official SDK, data-source model, read-only).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@exitos/core": "workspace:*",
+    "@exitos/shared": "workspace:*",
+    "@notionhq/client": "5.27.0",
+    "zod": "^4.6.5"
+  }
+}

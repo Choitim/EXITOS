@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-test
+coverage
+pnpm-lock.yaml
+.exitos
+playwright-report
+test-results
+docs/assets
+docs/competitive-landscape.md
+LICENSE
+*.tsbuildinfo

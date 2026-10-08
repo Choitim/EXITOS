@@ -1,0 +1,33 @@
+{
+  "name": "@exitos/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ExitOS command line: demo, inspect, plan, apply, status, resume, verify, report, ui.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "exitos": "./dist/bin.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@exitos/connector-clickup": "workspace:*",
+    "@exitos/connector-notion": "workspace:*",
+    "@exitos/core": "workspace:*",
+    "@exitos/demo-workspace": "workspace:*",
+    "@exitos/shared": "workspace:*",
+    "commander": "^15.0.0"
+  }
+}

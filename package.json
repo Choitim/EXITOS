@@ -1,0 +1,39 @@
+{
+  "name": "exitos-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ExitOS — see what survives before you switch apps. Open-source, local-first software portability and migration.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "tsc -b && pnpm --filter @exitos/web build",
+    "typecheck": "tsc -b && pnpm --filter @exitos/web typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "exitos": "node apps/cli/dist/bin.js",
+    "demo": "node apps/cli/dist/bin.js demo",
+    "docs:assets": "node scripts/generate-demo-svg.mjs",
+    "docs:screenshots": "playwright test --project=screenshots",
+    "clean": "node scripts/clean.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
+}

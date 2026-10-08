@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an improvement to ExitOS
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to migrate or understand?
+      description: Describe the concrete situation, not just the feature.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like ExitOS to do?
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety considerations
+      description: Could this write somewhere new, delete or overwrite anything, or touch credentials? How would the plan show it?
