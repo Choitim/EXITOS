@@ -54,5 +54,28 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'json-summary', 'lcov'],
+      reportsDirectory: 'coverage',
+      // A floor just under what is measured today (88 / 76 / 89 / 90 %): it stops quiet regressions
+      // without failing on noise. Raise it as coverage improves; never lower it to make a build pass.
+      thresholds: { statements: 86, branches: 74, functions: 87, lines: 87 },
+      // What ships: the library packages, the CLI and the dashboard. In-process fakes, fixtures and
+      // type-only files are test infrastructure, not product, so they do not count.
+      include: [
+        'packages/*/src/**/*.ts',
+        'apps/cli/src/**/*.ts',
+        'apps/web/src/**/*.{ts,tsx}',
+        'examples/example-connector/src/**/*.ts',
+      ],
+      exclude: [
+        '**/testing/**',
+        '**/*.d.ts',
+        'apps/cli/src/bin.ts',
+        'apps/web/src/main.tsx',
+        'packages/*/src/index.ts',
+      ],
+    },
   },
 });

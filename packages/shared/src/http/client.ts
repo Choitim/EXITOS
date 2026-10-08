@@ -8,6 +8,7 @@ import {
   ValidationError,
 } from '../errors.js';
 import { redactString, sanitizeUrl } from '../redact.js';
+import { describeNetworkFailure } from './diagnose.js';
 import type { RequestScheduler } from './scheduler.js';
 import type { FetchLike } from './types.js';
 
@@ -93,7 +94,7 @@ export class HttpClient {
       }
       if (error instanceof NetworkError) throw error;
       throw new NetworkError(
-        `${label}: ${error instanceof Error ? error.message : 'request failed'}`,
+        `${label}: ${error instanceof Error ? describeNetworkFailure(error) : 'request failed'}`,
         {
           cause: error,
         },

@@ -18,3 +18,4 @@ mark superseded records as such.
 | [0010](0010-explicit-user-mapping.md)                    | User mapping is explicit; assignment is opt-in                         |
 | [0011](0011-unmapped-fields-preserved-in-description.md) | Unmappable field values are preserved visibly, not dropped             |
 | [0012](0012-notion-version-pin.md)                       | Pin `Notion-Version` to 2026-03-11 and parse tolerantly                |
+| [0013](0013-proxy-support-via-undici.md)                 | Corporate proxy support through `undici`, from the standard env vars   |

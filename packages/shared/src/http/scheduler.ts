@@ -1,5 +1,6 @@
 import { Semaphore } from '../async.js';
 import { AbortedError, NetworkError } from '../errors.js';
+import { describeNetworkFailure } from './diagnose.js';
 import type { Clock } from '../clock.js';
 
 export interface RetryPolicy {
@@ -142,7 +143,7 @@ export class RequestScheduler {
             continue;
           }
           throw new NetworkError(
-            `${context.label}: request failed (${error instanceof Error ? error.message : 'network error'})`,
+            `${context.label}: request failed (${describeNetworkFailure(error)})`,
             { cause: lastNetworkError },
           );
         }

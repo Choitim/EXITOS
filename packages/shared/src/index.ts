@@ -10,5 +10,6 @@ export * from './logger.js';
 export * from './http/types.js';
 export * from './http/recorder.js';
 export * from './http/guard.js';
+export * from './http/diagnose.js';
 export * from './http/scheduler.js';
 export * from './http/client.js';

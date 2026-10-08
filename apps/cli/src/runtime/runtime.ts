@@ -28,6 +28,7 @@ import {
   type Logger,
 } from '@exitos/shared';
 import type { CliContext } from '../context.js';
+import { createNetworkFetch, proxyConfigFromEnv } from './proxy.js';
 import type { StateLocation } from './state.js';
 
 /** Fixed start so the demo's timestamps, run ids and plan ids are reproducible. */
@@ -84,12 +85,17 @@ function baseUrlFor(env: CliContext['env'], connectorId: string): string | undef
 
 function liveRuntime(ctx: CliContext, registry: ConnectorRegistry, logger: Logger): Runtime {
   const clock = ctx.overrides?.clock ?? systemClock;
+  // Honours HTTPS_PROXY / HTTP_PROXY / NO_PROXY; with none set this is the plain global `fetch`.
+  const network = createNetworkFetch(proxyConfigFromEnv(ctx.env), logger);
+  if (network.proxies.length > 0) {
+    logger.debug(`outbound requests use proxy ${network.proxies.join(', ')} (credentials hidden)`);
+  }
   const transports: Record<string, FetchLike> = {
-    notion: ctx.overrides?.notionFetch ?? ((url, init) => fetch(url, init)),
-    clickup: ctx.overrides?.clickupFetch ?? ((url, init) => fetch(url, init)),
+    notion: ctx.overrides?.notionFetch ?? network.fetch,
+    clickup: ctx.overrides?.clickupFetch ?? network.fetch,
   };
   const host = (id: string, recorder: RequestRecorder, config: MigrationConfig) => ({
-    transport: transports[id] ?? ((url: string, init?: RequestInit) => fetch(url, init)),
+    transport: transports[id] ?? network.fetch,
     mode: 'live' as const,
     env: ctx.env,
     logger,
@@ -119,7 +125,9 @@ function liveRuntime(ctx: CliContext, registry: ConnectorRegistry, logger: Logge
       return def.create(context, def.configSchema.parse(config.destination), config);
     },
     flush() {},
-    dispose() {},
+    dispose() {
+      void network.close();
+    },
   };
 }
 

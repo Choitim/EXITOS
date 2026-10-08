@@ -63,6 +63,29 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
         run: pnpm audit --audit-level high
 
+      - name: License allow-list (production dependencies)
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        run: pnpm check:licenses
+
+      - name: Test coverage (with a floor)
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        run: pnpm test:coverage
+
+      - name: Software bill of materials (CycloneDX)
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        run: pnpm sbom:generate
+
+      - name: Upload SBOM and coverage report
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-and-coverage
+          path: |
+            sbom/
+            coverage/lcov.info
+            coverage/coverage-summary.json
+          retention-days: 30
+
   dashboard:
     name: Dashboard browser test
     runs-on: ubuntu-latest

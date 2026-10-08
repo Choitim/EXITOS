@@ -1,0 +1,8 @@
+# Every change needs a review from the maintainer; the safety-critical paths are listed explicitly so
+# that they stay visible if more owners are added later.
+*                                   @Choitim
+/packages/shared/src/http/          @Choitim
+/packages/core/src/engine/          @Choitim
+/packages/connector-clickup/src/    @Choitim
+/.github/                           @Choitim
+/SECURITY.md                        @Choitim

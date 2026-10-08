@@ -1,0 +1,20 @@
+name: Dependency review
+
+# Blocks a pull request that introduces a dependency with a known high-severity vulnerability.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: Review dependency changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high

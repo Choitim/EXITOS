@@ -1,0 +1,33 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '23 4 * * 1' # weekly, Monday 04:23 UTC
+
+# Least privilege: the analysis job below adds the one extra permission it needs.
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (JavaScript/TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # upload results to code scanning
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript
