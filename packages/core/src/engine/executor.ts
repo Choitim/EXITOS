@@ -239,7 +239,9 @@ export async function executePlan(options: ExecuteOptions): Promise<ExecuteResul
   }
   for (const action of plan.actions) {
     for (const dep of action.dependsOn) {
-      dependents.set(dep, [...(dependents.get(dep) ?? []), action.id]);
+      const waiting = dependents.get(dep);
+      if (waiting === undefined) dependents.set(dep, [action.id]);
+      else waiting.push(action.id);
     }
     remaining.set(action.id, action.dependsOn.filter((d) => !done.has(d)).length);
   }

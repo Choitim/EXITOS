@@ -120,3 +120,19 @@ describe('parseNotionDate', () => {
     expect(parseNotionDate('2027-02-29', null, 'UTC')).toBeUndefined();
   });
 });
+
+describe('isValidTimeZone (cached)', () => {
+  it('keeps answering correctly for repeated valid and invalid zones', () => {
+    for (let i = 0; i < 3; i++) {
+      expect(isValidTimeZone('Europe/Berlin')).toBe(true);
+      expect(isValidTimeZone('Mars/Olympus_Mons')).toBe(false);
+      expect(isValidTimeZone('')).toBe(false);
+    }
+  });
+
+  it('does not let attacker-controlled zone names grow the cache without bound', () => {
+    // 5 000 distinct junk names: every answer is still correct, and nothing throws.
+    for (let i = 0; i < 5000; i++) expect(isValidTimeZone(`Junk/Zone_${i}`)).toBe(false);
+    expect(isValidTimeZone('UTC')).toBe(true);
+  });
+});

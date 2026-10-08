@@ -273,7 +273,9 @@ export async function verifyClickUp(
   const byList = new Map<string, MigrationAction[]>();
   for (const a of taskActions) {
     const listId = String((a.payload as { listId?: unknown }).listId);
-    byList.set(listId, [...(byList.get(listId) ?? []), a]);
+    const group = byList.get(listId);
+    if (group === undefined) byList.set(listId, [a]);
+    else group.push(a);
   }
   const taskCache = new Map<string, TaskInfo>();
 

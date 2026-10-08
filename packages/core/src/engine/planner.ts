@@ -59,7 +59,10 @@ export function routeSourceFindings(
 ): { actions: MigrationAction[]; planLevel: Finding[] } {
   const bySource = new Map<string, MigrationAction[]>();
   for (const a of actions) {
-    if (a.source !== null) bySource.set(a.source, [...(bySource.get(a.source) ?? []), a]);
+    if (a.source === null) continue;
+    const group = bySource.get(a.source);
+    if (group === undefined) bySource.set(a.source, [a]);
+    else group.push(a);
   }
   const extra = new Map<string, Finding[]>();
   const planLevel: Finding[] = [];
@@ -71,7 +74,9 @@ export function routeSourceFindings(
     }
     // Attach to the first action for that entity (the one that carries the content).
     const owner = owners[0] as MigrationAction;
-    extra.set(owner.id, [...(extra.get(owner.id) ?? []), f]);
+    const attached = extra.get(owner.id);
+    if (attached === undefined) extra.set(owner.id, [f]);
+    else attached.push(f);
   }
   const merged = actions.map((a) => {
     const add = extra.get(a.id);

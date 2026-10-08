@@ -26,13 +26,21 @@ export type ParsedDate =
       assumedZone: boolean;
     };
 
+const zoneValidity = new Map<string, boolean>();
+
 export function isValidTimeZone(timeZone: string): boolean {
+  const known = zoneValidity.get(timeZone);
+  if (known !== undefined) return known;
+  let valid: boolean;
   try {
     new Intl.DateTimeFormat('en-US', { timeZone });
-    return true;
+    valid = true;
   } catch {
-    return false;
+    valid = false;
   }
+  // Checked once per row on big migrations; zone names come from data, so keep the cache bounded.
+  if (zoneValidity.size < 1000) zoneValidity.set(timeZone, valid);
+  return valid;
 }
 
 const formatters = new Map<string, Intl.DateTimeFormat>();

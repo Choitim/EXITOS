@@ -465,7 +465,9 @@ function planDocs(a: DocsArgs): Finding[] {
   const roots: Document[] = [];
   for (const d of standalone) {
     if (d.parent !== undefined && keys.has(d.parent)) {
-      childrenOf.set(d.parent, [...(childrenOf.get(d.parent) ?? []), d]);
+      const siblings = childrenOf.get(d.parent);
+      if (siblings === undefined) childrenOf.set(d.parent, [d]);
+      else siblings.push(d);
     } else {
       if (d.parent !== undefined) {
         findings.push({

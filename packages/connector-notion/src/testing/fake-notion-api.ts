@@ -130,12 +130,24 @@ export function createFakeNotionApi(
     };
   };
 
-  const rowsOf = (dataSourceId: string): Obj[] =>
-    fixture.pages.filter(
-      (p) =>
-        norm((p.parent as Obj | undefined)?.data_source_id) === norm(dataSourceId) &&
-        !hidden.has(norm(p.id)),
-    );
+  // Rows by data source, indexed once. Re-filtering every page on every request made a 100 000-row
+  // fixture quadratic, which skewed the scale measurements; the index is rebuilt if pages are added.
+  let rowIndex: Map<string, Obj[]> | undefined;
+  let indexedPages = -1;
+  const rowsOf = (dataSourceId: string): Obj[] => {
+    if (rowIndex === undefined || indexedPages !== fixture.pages.length) {
+      rowIndex = new Map();
+      for (const page of fixture.pages) {
+        if (hidden.has(norm(page.id))) continue;
+        const key = norm((page.parent as Obj | undefined)?.data_source_id);
+        const bucket = rowIndex.get(key);
+        if (bucket === undefined) rowIndex.set(key, [page]);
+        else bucket.push(page);
+      }
+      indexedPages = fixture.pages.length;
+    }
+    return rowIndex.get(norm(dataSourceId)) ?? [];
+  };
 
   const handle = (req: FakeRequest, init: RequestInit | undefined): Response => {
     // ---- authentication & version -------------------------------------------------------------

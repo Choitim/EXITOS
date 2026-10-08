@@ -82,7 +82,9 @@ export function validatePlanGraph(plan: Pick<MigrationPlan, 'actions'>): void {
   const dependents = new Map<string, string[]>();
   for (const a of plan.actions) {
     for (const dep of a.dependsOn) {
-      dependents.set(dep, [...(dependents.get(dep) ?? []), a.id]);
+      const waiting = dependents.get(dep);
+      if (waiting === undefined) dependents.set(dep, [a.id]);
+      else waiting.push(a.id);
     }
   }
   const queue = [...indegree].filter(([, n]) => n === 0).map(([id]) => id);
