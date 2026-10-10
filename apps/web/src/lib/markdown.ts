@@ -10,7 +10,7 @@
  * Link and image URLs are checked against the allow-list in `url.ts` while parsing, so an unsafe
  * URL is never even present in the tree (`href` is `null`).
  */
-import { sanitizeUrl } from './url';
+import { sanitizeUrl, MAX_URL_LENGTH } from './url';
 
 export type InlineNode =
   | { type: 'text'; text: string }
@@ -48,6 +48,8 @@ export const MAX_MARKDOWN_LENGTH = 300_000;
 const MAX_BLOCK_DEPTH = 8;
 /** Link labels nest at most this deep. */
 const MAX_INLINE_DEPTH = 4;
+/** Link titles are ignored by ExitOS; a longer one is not worth scanning for. */
+const MAX_TITLE_LENGTH = 1_000;
 /** More delimiter runs than this in one paragraph are not matched (keeps the work linear-ish). */
 const MAX_DELIMITERS = 600;
 
@@ -456,10 +458,15 @@ interface LinkMatch {
   end: number;
 }
 
-/** Find the `]` that closes the `[` at `open`, skipping escapes, code spans and nested brackets. */
-function findClosingBracket(src: string, open: number): number {
-  let depth = 1;
-  for (let j = open + 1; j < src.length; j += 1) {
+/**
+ * For every `[` that has one, the index of the `]` that closes it, skipping escapes, code spans and
+ * nested brackets. Found in ONE pass with a stack: scanning to the end of the text for every `[` made
+ * a page full of unmatched brackets take quadratic time.
+ */
+function matchBrackets(src: string): Map<number, number> {
+  const closing = new Map<number, number>();
+  const open: number[] = [];
+  for (let j = 0; j < src.length; j += 1) {
     const ch = src.charAt(j);
     if (ch === '\\') {
       j += 1;
@@ -467,17 +474,17 @@ function findClosingBracket(src: string, open: number): number {
       let k = j;
       while (src.charAt(k) === '`') k += 1;
       const ticks = k - j;
-      const closing = findBacktickRun(src, k, ticks);
-      if (closing >= 0) j = closing + ticks - 1;
+      const end = findBacktickRun(src, k, ticks);
+      if (end >= 0) j = end + ticks - 1;
       else j = k - 1;
     } else if (ch === '[') {
-      depth += 1;
+      open.push(j);
     } else if (ch === ']') {
-      depth -= 1;
-      if (depth === 0) return j;
+      const opener = open.pop();
+      if (opener !== undefined) closing.set(opener, j);
     }
   }
-  return -1;
+  return closing;
 }
 
 /** Index of the next run of EXACTLY `ticks` backticks at or after `from`, or -1. */
@@ -496,8 +503,8 @@ function findBacktickRun(src: string, from: number, ticks: number): number {
   return -1;
 }
 
-function matchLink(src: string, open: number): LinkMatch | null {
-  const close = findClosingBracket(src, open);
+function matchLink(src: string, open: number, closing: Map<number, number>): LinkMatch | null {
+  const close = closing.get(open) ?? -1;
   if (close < 0 || src.charAt(close + 1) !== '(') return null;
   const label = src.slice(open + 1, close);
   let k = close + 2;
@@ -505,15 +512,19 @@ function matchLink(src: string, open: number): LinkMatch | null {
 
   let destination: string;
   if (src.charAt(k) === '<') {
-    const end = src.indexOf('>', k + 1);
+    // A destination longer than a URL may be is not one: stop looking instead of scanning to the end.
+    const end = src.slice(k + 1, k + 2 + MAX_URL_LENGTH).indexOf('>');
     if (end < 0) return null;
-    destination = src.slice(k + 1, end);
+    const closeAt = k + 1 + end;
+    destination = src.slice(k + 1, closeAt);
     if (/[\n<]/.test(destination)) return null;
-    k = end + 1;
+    k = closeAt + 1;
   } else {
     let parens = 0;
     let raw = '';
+    const destinationStart = k;
     while (k < src.length) {
+      if (k - destinationStart > 2 * MAX_URL_LENGTH) return null; // not a URL: no scan to the end per `[a](`
       const ch = src.charAt(k);
       if (ch === '\\' && k + 1 < src.length && ASCII_PUNCTUATION.includes(src.charAt(k + 1))) {
         raw += ch + src.charAt(k + 1); // unescaped later, together with the angle-bracket form
@@ -537,8 +548,10 @@ function matchLink(src: string, open: number): LinkMatch | null {
   if (quote === '"' || quote === "'" || quote === '(') {
     const closer = quote === '(' ? ')' : quote;
     let t = k + 1;
-    while (t < src.length && src.charAt(t) !== closer) t += src.charAt(t) === '\\' ? 2 : 1;
-    if (t >= src.length) return null;
+    while (t < src.length && t - k <= MAX_TITLE_LENGTH && src.charAt(t) !== closer) {
+      t += src.charAt(t) === '\\' ? 2 : 1;
+    }
+    if (t >= src.length || t - k > MAX_TITLE_LENGTH) return null;
     k = t + 1;
     while (/[ \t\n]/.test(src.charAt(k))) k += 1;
   }
@@ -548,6 +561,8 @@ function matchLink(src: string, open: number): LinkMatch | null {
 
 function tokenize(src: string, depth: number, inLink: boolean): Token[] {
   const tokens: Token[] = [];
+  let brackets: Map<number, number> | undefined;
+  const closingBrackets = (): Map<number, number> => (brackets ??= matchBrackets(src));
   let text = '';
   const flush = (): void => {
     if (text !== '') {
@@ -607,7 +622,7 @@ function tokenize(src: string, depth: number, inLink: boolean): Token[] {
       const image = ch === '!';
       const open = image ? i + 1 : i;
       const allowed = image || (!inLink && depth < MAX_INLINE_DEPTH);
-      const match = allowed ? matchLink(src, open) : null;
+      const match = allowed ? matchLink(src, open, closingBrackets()) : null;
       if (match === null) {
         text += src.slice(i, open + 1);
         i = open + 1;

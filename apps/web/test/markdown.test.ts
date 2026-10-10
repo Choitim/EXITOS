@@ -519,11 +519,35 @@ describe('robustness', () => {
       '**a *b ~~c `d` e~~ f* g**'.repeat(2_000),
       'a\n'.repeat(50_000),
     ];
-    const started = performance.now();
     for (const input of inputs) {
       expect(() => parseMarkdown(input)).not.toThrow();
     }
-    expect(performance.now() - started).toBeLessThan(10_000);
+  });
+
+  // "Stays fast" is checked by how time GROWS with the input, not by a wall-clock budget: a fixed number
+  // of seconds is true on one machine and false on another (this parser takes about 1 s for the inputs
+  // above on a laptop, 8 s with coverage instrumentation, and over 20 s on a slow CI runner). Doubling the
+  // input must not do much more than double the work; a quadratic or exponential parser would blow past this.
+  it.each([
+    ['unmatched [', (n: number) => '['.repeat(n)],
+    ['unclosed links', (n: number) => '[a]('.repeat(n)],
+    ['emphasis markers', (n: number) => '*'.repeat(n)],
+    ['mixed emphasis', (n: number) => '**a *b ~~c `d` e~~ f* g**'.repeat(n)],
+    ['table rows', (n: number) => '| a |\n| - |\n' + '| x |\n'.repeat(n)],
+    ['plain lines', (n: number) => 'a\n'.repeat(n)],
+  ])('%s: doubling the input does not much more than double the time', (_name, make) => {
+    const time = (n: number): number => {
+      const input = make(n);
+      parseMarkdown(input); // warm up the JIT so the comparison is fair
+      const started = performance.now();
+      for (let i = 0; i < 3; i += 1) parseMarkdown(input);
+      return performance.now() - started;
+    };
+    const small = time(4_000);
+    const large = time(8_000);
+    // 2x the input. Linear work is ~2x; allow generous noise (and a floor for tiny timings), but a
+    // quadratic parser would be ~4x or more at this size.
+    expect(large).toBeLessThan(Math.max(small * 3.2, 25));
   });
 
   it('flattens absurdly deep nesting instead of recursing without bound', () => {
