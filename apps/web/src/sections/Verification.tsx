@@ -9,6 +9,7 @@ import {
   CopyButton,
   Icon,
   SectionShell,
+  StateChip,
   Stat,
   TONE_TEXT,
   TableWrap,
@@ -24,16 +25,34 @@ import {
   timeZoneLabel,
   type Tone,
 } from '../lib/format';
+import { STATE_META, type IconName } from '../lib/outcomes';
 import { sanitizeUrl, EXTERNAL_LINK_PROPS } from '../lib/url';
 
-const ITEM_STATUS: Record<
-  string,
-  { tone: Tone; icon: 'check' | 'cross' | 'warning' | 'info'; label: string }
-> = {
-  verified: { tone: 'ok', icon: 'check', label: 'Verified' },
-  mismatched: { tone: 'bad', icon: 'cross', label: 'Mismatched' },
-  missing: { tone: 'bad', icon: 'cross', label: 'Missing' },
-  unverified: { tone: 'warn', icon: 'warning', label: 'Not verified' },
+/**
+ * Item and check statuses in the dashboard's vocabulary: a matching item is Verified; one that
+ * differs or is missing is Failed (with the reason beside it); one that could not be checked
+ * "requires review" in the sense that nothing is known about it either way.
+ */
+const ITEM_STATUS: Record<string, { tone: Tone; icon: IconName; label: string; solid: boolean }> = {
+  verified: {
+    tone: STATE_META.verified.tone,
+    icon: STATE_META.verified.icon,
+    label: STATE_META.verified.label,
+    solid: true,
+  },
+  mismatched: {
+    tone: STATE_META.failed.tone,
+    icon: STATE_META.failed.icon,
+    label: 'Failed: mismatched',
+    solid: true,
+  },
+  missing: {
+    tone: STATE_META.failed.tone,
+    icon: STATE_META.failed.icon,
+    label: 'Failed: missing',
+    solid: true,
+  },
+  unverified: { tone: 'warn', icon: 'warning', label: 'Not verified', solid: false },
 };
 
 function StatusChip({ status }: { status: string }) {
@@ -41,9 +60,10 @@ function StatusChip({ status }: { status: string }) {
     tone: 'neutral' as const,
     icon: 'info' as const,
     label: status,
+    solid: false,
   };
   return (
-    <Chip tone={meta.tone} icon={meta.icon}>
+    <Chip tone={meta.tone} icon={meta.icon} solid={meta.solid}>
       {meta.label}
     </Chip>
   );
@@ -129,8 +149,13 @@ export function VerificationReport({
                 tone={d.tone}
                 title={<span data-testid="verification-status">{d.label}</span>}
                 testId="verification-banner"
+                tourTarget="result"
               >
-                <p>{d.summary}</p>
+                <p className="flex flex-wrap items-center gap-2">
+                  {verification.status === 'passed' ? <StateChip state="verified" /> : null}
+                  {verification.status === 'failed' ? <StateChip state="failed" /> : null}
+                  <span>{d.summary}</span>
+                </p>
                 <p className="text-sm">
                   Verified at{' '}
                   <time dateTime={verification.verifiedAt}>
@@ -146,21 +171,31 @@ export function VerificationReport({
             <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Stat
                 label="Verified"
+                icon={STATE_META.verified.icon}
+                iconTone="ok"
                 value={formatNumber(verification.counts.verified)}
                 testId="vcount-verified"
               />
               <Stat
                 label="Mismatched"
+                icon={verification.counts.mismatched > 0 ? STATE_META.failed.icon : 'minus'}
+                iconTone={verification.counts.mismatched > 0 ? 'bad' : 'neutral'}
                 value={formatNumber(verification.counts.mismatched)}
+                hint={verification.counts.mismatched > 0 ? 'counted as Failed' : undefined}
                 testId="vcount-mismatched"
               />
               <Stat
                 label="Missing"
+                icon={verification.counts.missing > 0 ? STATE_META.failed.icon : 'minus'}
+                iconTone={verification.counts.missing > 0 ? 'bad' : 'neutral'}
                 value={formatNumber(verification.counts.missing)}
+                hint={verification.counts.missing > 0 ? 'counted as Failed' : undefined}
                 testId="vcount-missing"
               />
               <Stat
                 label="Not verified"
+                icon={verification.counts.unverified > 0 ? 'warning' : 'minus'}
+                iconTone={verification.counts.unverified > 0 ? 'warn' : 'neutral'}
                 value={formatNumber(verification.counts.unverified)}
                 testId="vcount-unverified"
               />

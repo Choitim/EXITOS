@@ -5,6 +5,11 @@ import { Icon, OutcomeChip, TableWrap } from './ui';
 
 export type OutcomeTally = Record<Outcome, number>;
 
+/** Sum of all outcome counts. */
+export function tallyTotal(tally: OutcomeTally): number {
+  return OUTCOME_ORDER.reduce((sum, outcome) => sum + tally[outcome], 0);
+}
+
 const BAR_CLASS = {
   ok: 'bar-ok',
   info: 'bar-info',
@@ -15,13 +20,16 @@ const BAR_CLASS = {
 
 /** Stacked proportional bar. Decorative: the table next to it carries every number as text. */
 export function OutcomeBar({ tally, label }: { tally: OutcomeTally; label: string }) {
-  const total = OUTCOME_ORDER.reduce((sum, outcome) => sum + tally[outcome], 0);
+  const total = tallyTotal(tally);
   const present = OUTCOME_ORDER.filter((outcome) => tally[outcome] > 0);
   const description = `${label}: ${
     present.length === 0
       ? 'no data'
       : present
-          .map((o) => `${formatNumber(tally[o])} ${OUTCOME_META[o].label.toLowerCase()}`)
+          .map(
+            (o) =>
+              `${OUTCOME_META[o].label} ${formatNumber(tally[o])} (${OUTCOME_META[o].plain.toLowerCase()})`,
+          )
           .join(', ')
   }`;
   return (
@@ -34,7 +42,7 @@ export function OutcomeBar({ tally, label }: { tally: OutcomeTally; label: strin
             key={outcome}
             className={`bar-seg ${BAR_CLASS[meta.tone]}`}
             style={{ flexGrow: tally[outcome], flexBasis: 0 }}
-            title={`${meta.label}: ${formatNumber(tally[outcome])} (${formatPercent(tally[outcome], total)})`}
+            title={`${meta.label} (${meta.plain.toLowerCase()}): ${formatNumber(tally[outcome])} (${formatPercent(tally[outcome], total)})`}
           >
             {share >= 0.07 ? <Icon name={meta.icon} className="size-4 drop-shadow" /> : null}
           </div>
@@ -56,7 +64,7 @@ export function OutcomeTable({
   unit: string;
   testIdPrefix: string;
 }) {
-  const total = OUTCOME_ORDER.reduce((sum, outcome) => sum + tally[outcome], 0);
+  const total = tallyTotal(tally);
   // The four headline buckets are always listed; skipped/failed only when they occur.
   const rows = OUTCOME_ORDER.filter(
     (o) =>

@@ -1,11 +1,38 @@
 import type { DashboardState } from '@exitos/core/schema';
-import { Button, Callout, Card, CommandLine, CopyButton } from './ui';
+import { Button, Callout, Card, CommandLine, CopyButton, Skeleton } from './ui';
 
+/**
+ * Placeholders in the shape of the overview (banner, five stages, two cards) while the first
+ * response is on its way. The words are for screen readers and for people who look away from the
+ * grey blocks; the blocks themselves are decorative.
+ */
 export function LoadingScreen() {
   return (
-    <div className="card" role="status" aria-live="polite" data-testid="loading">
-      <p className="font-semibold">Loading the dashboard state…</p>
-      <p className="text-sm text-muted">Reading from the local ExitOS server.</p>
+    <div
+      className="space-y-6"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      data-testid="loading"
+    >
+      <div>
+        <p className="font-semibold">Loading the dashboard state…</p>
+        <p className="text-sm text-muted">Reading from the local ExitOS server.</p>
+      </div>
+      <div className="space-y-3" data-testid="loading-skeleton">
+        <Skeleton className="h-8 w-2/3 sm:w-1/3" />
+        <Skeleton className="h-4 w-full max-w-xl" />
+        <Skeleton className="h-24 w-full" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
+          {Array.from({ length: 5 }, (_unused, i) => (
+            <Skeleton key={i} className="h-16" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Skeleton className="h-56" />
+          <Skeleton className="h-56" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -74,7 +101,7 @@ export function StaleBanner({
 
 export function EmptyState({ state }: { state: DashboardState }) {
   return (
-    <div className="space-y-5" data-testid="empty-state">
+    <div className="space-y-6" data-testid="empty-state">
       <Callout tone="info" title="There is no plan or run to show yet">
         <p>
           This state directory is empty. The dashboard shows only real data from your plans and
@@ -84,8 +111,14 @@ export function EmptyState({ state }: { state: DashboardState }) {
             : ''}
         </p>
       </Callout>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Card title="Try it with no account">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight">Two ways to get started</h2>
+        <p className="mt-1 text-muted">
+          Run one of these in a terminal. Neither writes to Notion or ClickUp.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card title="1. Try it with no account" headingLevel={3}>
           <p className="mb-3">
             Run the offline demo. It plans, applies and verifies a synthetic Notion to ClickUp
             migration against fake APIs, with no network.
@@ -96,7 +129,7 @@ export function EmptyState({ state }: { state: DashboardState }) {
           <CommandLine command="exitos ui --demo" />
           <CopyButton text="exitos ui --demo" label="Copy" testId="copy-ui-demo" />
         </Card>
-        <Card title="Plan your own migration">
+        <Card title="2. Plan your own migration" headingLevel={3}>
           <p className="mb-3">
             Create a read-only plan from a config file. Nothing is written to either system when you
             plan.

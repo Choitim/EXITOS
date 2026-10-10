@@ -1,0 +1,66 @@
+name: Pages
+
+# Publishes the static ONLINE DEMO (apps/web/dist-demo) to GitHub Pages.
+#
+# Manual only: nothing runs this on push, on a schedule or on a pull request, and it does nothing
+# until the repository owner (1) sets Settings -> Pages -> Source to "GitHub Actions" and (2) starts
+# this workflow from the Actions tab. See docs/online-demo.md.
+#
+# The demo is a replay of a recorded offline run on synthetic data. It has no backend, no login and
+# no credentials, and it cannot connect to Notion or ClickUp.
+on:
+  workflow_dispatch:
+
+# Least privilege: read the repository, and let the deployment step publish to Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a deployment that has started is never cancelled half-way.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the online demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4 # version is taken from "packageManager" in package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      # The demo's data is recorded by the real engine, so the CLI and core must be built first.
+      - name: Build (CLI, core and dashboard)
+        run: pnpm build
+
+      - name: Build the online demo (static site and recorded data)
+        run: pnpm build:demo
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/web/dist-demo
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

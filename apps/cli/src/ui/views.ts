@@ -44,8 +44,22 @@ export function colourFor(style: Style, outcome: Outcome): (s: string) => string
   }
 }
 
+/**
+ * What a person reads for each outcome. The same six words appear in the dashboard and the docs:
+ * Preserved, Transformed, Requires review, Unsupported, Failed (and Verified, once verification passes).
+ * `OUTCOME_WORD` above is the plain-language gloss that goes with them.
+ */
+export const OUTCOME_LABEL: Record<Outcome, string> = {
+  supported: 'preserved',
+  transformed: 'transformed',
+  lossy: 'requires review',
+  unsupported: 'unsupported',
+  skipped: 'skipped',
+  failed: 'failed',
+};
+
 export const outcomeTag = (style: Style, o: Outcome): string =>
-  colourFor(style, o)(`${ICON[o]} ${o}`);
+  colourFor(style, o)(`${ICON[o]} ${OUTCOME_LABEL[o]}`);
 
 /** `notion` → `Notion`, `clickup` → `ClickUp` (display only). */
 export function prettyConnector(id: string): string {
@@ -211,7 +225,7 @@ export function planView(
           { header: '→ ClickUp', value: (m) => targetLabel(m), max: 28 },
           {
             header: 'Outcome',
-            value: (m) => `${ICON[m.outcome]} ${m.outcome}`,
+            value: (m) => `${ICON[m.outcome]} ${OUTCOME_LABEL[m.outcome]}`,
             colour: (m, cell) => colourFor(style, m.outcome)(cell),
           },
         ],
@@ -450,7 +464,7 @@ export function reportView(
   out.push('');
   const s = report.plan.summary;
   out.push(
-    `  ${style.green('✔')} ${s.items.supported} as-is   ${style.cyan('↻')} ${s.items.transformed} reshaped   ${style.yellow('⚠')} ${s.items.lossy} lose detail   ${style.gray('○')} ${s.items.skipped} skipped   ${style.red('✖')} ${s.notPreserved.unsupported} cannot move`,
+    `  ${style.green('✔')} ${s.items.supported} preserved   ${style.cyan('↻')} ${s.items.transformed} transformed   ${style.yellow('⚠')} ${s.items.lossy} require review   ${style.gray('○')} ${s.items.skipped} skipped   ${style.red('✖')} ${s.notPreserved.unsupported} unsupported`,
   );
   if (report.run) {
     const c = report.run.counts;
@@ -466,7 +480,8 @@ export function reportView(
   }
   out.push('');
   out.push(
-    style.bold('NOT PRESERVED') + style.gray('  (lossy and unsupported — never silently dropped)'),
+    style.bold('NOT PRESERVED') +
+      style.gray('  (requires review and unsupported — never silently dropped)'),
   );
   const np = report.notPreserved;
   if (np.length === 0) out.push('  Nothing in the declared scope.');
@@ -509,7 +524,7 @@ export function findingsTable(
     [
       {
         header: 'Outcome',
-        value: (f: Finding) => `${ICON[f.outcome]} ${f.outcome}`,
+        value: (f: Finding) => `${ICON[f.outcome]} ${OUTCOME_LABEL[f.outcome]}`,
         colour: (f, cell) => colourFor(style, f.outcome)(cell),
       },
       { header: 'Count', value: (f) => number(f.count ?? 1), align: 'right' },

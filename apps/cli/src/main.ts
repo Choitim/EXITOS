@@ -4,6 +4,7 @@ import { createContext, createNodeIo, eprintln, type CliContext } from './contex
 import { applyCommand } from './commands/apply.js';
 import { connectorsCommand } from './commands/connectors.js';
 import { demoCommand } from './commands/demo.js';
+import { doctorCommand } from './commands/doctor.js';
 import {
   inspectCommand,
   reportCommand,
@@ -52,10 +53,13 @@ Safety model:  inspect → plan → approve → apply → verify
   Everything before "apply" is read-only. "apply" needs --approve <planId>.
   ExitOS never modifies the source and never deletes or overwrites destination content.
 
-Try it offline (no account, no network):
-  ${BIN_NAME} demo
+Get started:
+  ${BIN_NAME} demo                          try it offline: no account, no network, no credentials
+  ${BIN_NAME} doctor                        check that this machine is ready
+  ${BIN_NAME} doctor --live                 ... and that you are ready for a real migration
+  ${BIN_NAME} <command> --help              details and examples for one command
 
-Docs: docs/product-spec.md · docs/live-sandbox-testing.md`,
+Docs: README.md · docs/live-sandbox-testing.md · docs/enterprise-readiness.md`,
     );
 
   const verbose = (): boolean => program.opts<{ verbose?: boolean }>().verbose === true;
@@ -85,6 +89,41 @@ Docs: docs/product-spec.md · docs/live-sandbox-testing.md`,
     );
 
   program
+    .command('doctor')
+    .description(
+      'check that your setup is ready: Node.js, credentials, proxy, config (add --online to test the APIs)',
+    )
+    .option(
+      '--live',
+      'you are about to run a real migration: missing credentials or config count as problems',
+    )
+    .option('--online', 'also make read-only calls to the Notion and ClickUp APIs')
+    .option(
+      '-c, --config <file>',
+      'validate this migration config offline (default: ./migration.yaml if present)',
+    )
+    .option('--state-dir <dir>', 'state directory')
+    .option('--json', 'machine-readable output')
+    .addHelpText(
+      'after',
+      `
+Examples:
+  ${BIN_NAME} doctor                       is this machine ready? (sends nothing anywhere)
+  ${BIN_NAME} doctor --live                ready for a real migration? tokens and config are required
+  ${BIN_NAME} doctor --online              also prove the tokens and your proxy work (read-only calls)
+  ${BIN_NAME} doctor --config my.yaml      validate a config without touching any API`,
+    )
+    .action(
+      (o: {
+        live?: boolean;
+        online?: boolean;
+        config?: string;
+        stateDir?: string;
+        json?: boolean;
+      }) => run(() => doctorCommand(ctx, { ...o, verbose: verbose() }))(),
+    );
+
+  program
     .command('inspect <target>')
     .description('read-only: list what an integration can see (notion | clickup)')
     .option(
@@ -104,7 +143,21 @@ Docs: docs/product-spec.md · docs/live-sandbox-testing.md`,
     .description(
       'read-only: build an inspectable, hashed migration plan (e.g. `plan notion clickup`)',
     )
-    .requiredOption('-c, --config <file>', 'migration config (see migration.example.yaml)')
+    .addHelpText(
+      'after',
+      `
+
+Examples:
+  ${BIN_NAME} plan notion clickup                        uses ./migration.yaml when it exists
+  ${BIN_NAME} plan notion clickup --config my.yaml       choose the config explicitly
+  ${BIN_NAME} plan notion clickup --summary              a shorter terminal summary
+
+Reads only. Nothing is written to Notion or ClickUp; the plan file holds your content, so keep it private.`,
+    )
+    .option(
+      '-c, --config <file>',
+      'migration config (default: ./migration.yaml if present; start from migration.example.yaml)',
+    )
     .option('-o, --out <file>', 'where to write the plan (default migration-plan.json)')
     .option('--summary', 'print a shorter terminal summary')
     .option('--json', 'machine-readable output')
@@ -115,7 +168,7 @@ Docs: docs/product-spec.md · docs/live-sandbox-testing.md`,
         source: string,
         destination: string,
         o: {
-          config: string;
+          config?: string;
           out?: string;
           summary?: boolean;
           json?: boolean;
@@ -129,6 +182,16 @@ Docs: docs/product-spec.md · docs/live-sandbox-testing.md`,
     .command('apply')
     .description(
       'execute an approved plan (writes to the destination only; the source is never modified)',
+    )
+    .addHelpText(
+      'after',
+      `
+
+Examples:
+  ${BIN_NAME} apply --plan migration-plan.json --approve <planId>    approve explicitly (no prompt)
+  ${BIN_NAME} apply --plan migration-plan.json                       you will be asked to type the plan id
+
+If it stops (rate limit, crash, Ctrl-C), run \`${BIN_NAME} resume\`: it never re-creates what already exists.`,
     )
     .requiredOption('--plan <file>', 'plan file created by `plan`')
     .option(
@@ -206,6 +269,15 @@ Docs: docs/product-spec.md · docs/live-sandbox-testing.md`,
   program
     .command('report')
     .description('the report: what moved, what changed, what was NOT preserved, and verification')
+    .addHelpText(
+      'after',
+      `
+
+Examples:
+  ${BIN_NAME} report                                        in the terminal
+  ${BIN_NAME} report --format markdown --out report.md      a document to keep
+  ${BIN_NAME} report --format markdown --redact --out r.md  safe to share: names and titles become hashes`,
+    )
     .option('--run <id>', 'run id (default: latest)')
     .option('--format <format>', 'terminal | markdown | json')
     .option('-o, --out <file>', 'write to a file')
@@ -230,6 +302,16 @@ Docs: docs/product-spec.md · docs/live-sandbox-testing.md`,
   program
     .command('ui')
     .description('open the local, read-only dashboard (served from 127.0.0.1)')
+    .addHelpText(
+      'after',
+      `
+
+Examples:
+  ${BIN_NAME} ui --demo        explore the offline demo run
+  ${BIN_NAME} ui               explore your latest real plan and run
+
+The dashboard is read-only and local: it cannot approve, apply or change anything.`,
+    )
     .option('--port <n>', 'port (default 4173)', int('--port', 0, 65535))
     .option('--demo', 'show the offline demo run')
     .option('--state-dir <dir>', 'state directory')
@@ -268,7 +350,7 @@ export async function runCli(argv: readonly string[], ctx: CliContext): Promise<
     eprintln(
       ctx,
       ctx.style.gray(
-        'Re-run with --verbose for more detail, and please report it (docs/CONTRIBUTING.md) — never include tokens.',
+        'Re-run with --verbose for more detail, and please report it (CONTRIBUTING.md) — never include tokens.',
       ),
     );
     if (argv.includes('--verbose') && error instanceof Error && error.stack)

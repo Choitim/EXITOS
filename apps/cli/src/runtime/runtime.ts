@@ -29,6 +29,7 @@ import {
 } from '@exitos/shared';
 import type { CliContext } from '../context.js';
 import { createNetworkFetch, proxyConfigFromEnv } from './proxy.js';
+import { connectorConfig, validateConnectorConfigs } from './config-check.js';
 import type { StateLocation } from './state.js';
 
 /** Fixed start so the demo's timestamps, run ids and plan ids are reproducible. */
@@ -53,6 +54,8 @@ export interface Runtime {
   ): DestinationConnector;
   /** Present only in demo mode. */
   readonly demo?: { notion: FakeNotionApi; clickup: FakeClickUpApi };
+  /** Validate both connector sections of a config at once, so every problem is reported together. */
+  checkConfig(config: MigrationConfig): void;
   /** Persist in-memory state that must survive the process (the demo's fake ClickUp). */
   flush(): void;
   dispose(): void;
@@ -117,13 +120,14 @@ function liveRuntime(ctx: CliContext, registry: ConnectorRegistry, logger: Logge
         'read-only',
         host(def.manifest.id, recorder, config),
       );
-      return def.create(context, def.configSchema.parse(config.source), config);
+      return def.create(context, connectorConfig(def, 'source', config.source), config);
     },
     createDestination(config, access, recorder) {
       const def = registry.destination(config.destination.type);
       const context = createConnectorContext(def, access, host(def.manifest.id, recorder, config));
-      return def.create(context, def.configSchema.parse(config.destination), config);
+      return def.create(context, connectorConfig(def, 'destination', config.destination), config);
     },
+    checkConfig: (config) => validateConnectorConfigs(registry, config),
     flush() {},
     dispose() {
       void network.close();
@@ -201,13 +205,14 @@ function demoRuntime(
         'read-only',
         host(def.manifest.id, recorder, config),
       );
-      return def.create(context, def.configSchema.parse(config.source), config);
+      return def.create(context, connectorConfig(def, 'source', config.source), config);
     },
     createDestination(config, access, recorder) {
       const def = registry.destination(config.destination.type);
       const context = createConnectorContext(def, access, host(def.manifest.id, recorder, config));
-      return def.create(context, def.configSchema.parse(config.destination), config);
+      return def.create(context, connectorConfig(def, 'destination', config.destination), config);
     },
+    checkConfig: (config) => validateConnectorConfigs(registry, config),
     flush,
     dispose() {
       flush();

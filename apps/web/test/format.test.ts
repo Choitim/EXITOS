@@ -180,7 +180,12 @@ describe('verification wording', () => {
     });
     expect(failed.label).toBe('FAILED');
     expect(failed.tone).toBe('bad');
-    expect(failed.summary).toBe('1 item differ and 2 items are missing in the destination.');
+    expect(failed.summary).toBe('1 item differs and 2 items are missing in the destination.');
+    const many = describeVerification({
+      status: 'failed',
+      counts: { verified: 0, mismatched: 2, missing: 1, unverified: 0 },
+    });
+    expect(many.summary).toBe('2 items differ and 1 item is missing in the destination.');
     const incomplete = describeVerification({
       status: 'incomplete',
       counts: { verified: 3, mismatched: 0, missing: 0, unverified: 1 },

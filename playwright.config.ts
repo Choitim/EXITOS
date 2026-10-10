@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 import { isCi, wantsScreenshots } from './e2e/support/config.js';
 
 /**
- * `playwright test` runs the dashboard tests. The `screenshots` project regenerates the images in
+ * `playwright test` runs the dashboard tests and the static online demo's tests. The `screenshots` project regenerates the images in
  * docs/assets and is therefore opt-in: it exists only when asked for with
  * `playwright test --project=screenshots` (that is `pnpm docs:screenshots`).
  */
@@ -26,6 +26,13 @@ export default defineConfig({
     {
       name: 'chromium',
       testMatch: /dashboard\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+    },
+    {
+      // The online demo (apps/web/dist-demo) behind a plain file server under /EXITOS/; see
+      // e2e/global-setup.ts. It sets its own viewport and motion preferences per test.
+      name: 'static-demo',
+      testMatch: /static-demo\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
     },
     ...(wantsScreenshots

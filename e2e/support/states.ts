@@ -210,6 +210,102 @@ export function advanceLiveRun(dbPath: string, runId: string, count: number): nu
   }
 }
 
+/** A plan that was never approved: the state holds the plan and nothing else. */
+export function seedPlannedOnly(dbPath: string, plan: MigrationPlan): void {
+  const store = SqliteStateStore.open(dbPath);
+  try {
+    store.savePlan(plan);
+  } finally {
+    store.close();
+  }
+}
+
+/** Every executable action written, the run `applied`, and no verification ever run. */
+export function seedAppliedUnverified(dbPath: string, plan: MigrationPlan): void {
+  const store = SqliteStateStore.open(dbPath);
+  try {
+    const runId = 'run_e2e_applied';
+    const approvedAt = new Date().toISOString();
+    store.createRun({ runId, plan, approvedAt });
+    store.addEvent(runId, 'info', 'approved', `Plan ${plan.planId} approved.`);
+    store.setRunStatus(runId, 'applying', { startedAt: approvedAt });
+    store.addEvent(runId, 'info', 'run_started', 'Run started.');
+    for (const [index, action] of plan.actions.entries()) {
+      if (action.disposition !== 'execute') continue;
+      store.markInFlight(runId, action.id);
+      store.markSucceeded(runId, action.id, { destinationId: `applied_${index}` });
+      store.addEvent(runId, 'info', 'action_succeeded', action.label);
+    }
+    store.setRunStatus(runId, 'applied', { finishedAt: new Date().toISOString() });
+    store.addEvent(runId, 'info', 'run_finished', 'All actions applied. Not verified yet.');
+  } finally {
+    store.close();
+  }
+}
+
+/**
+ * A run that stopped half way: some actions written, one reconciled after a lost reply, two
+ * failed, one blocked by them and one whose outcome is unknown, the rest still pending.
+ */
+export function seedFailedRun(dbPath: string, plan: MigrationPlan): void {
+  const store = SqliteStateStore.open(dbPath);
+  try {
+    const runId = 'run_e2e_failed';
+    const approvedAt = new Date().toISOString();
+    store.createRun({ runId, plan, approvedAt });
+    store.addEvent(runId, 'info', 'approved', `Plan ${plan.planId} approved.`);
+    store.setRunStatus(runId, 'applying', { startedAt: approvedAt });
+    store.addEvent(runId, 'info', 'run_started', 'Run started.');
+    const executable = plan.actions.filter((a) => a.disposition === 'execute');
+    const written = executable.slice(0, 5);
+    const lost = executable[5];
+    const failedA = executable[6];
+    const failedB = executable[7];
+    const blocked = executable[8];
+    const unknown = executable[9];
+    for (const [index, action] of written.entries()) {
+      store.markInFlight(runId, action.id);
+      store.markSucceeded(runId, action.id, { destinationId: `failed_${index}` });
+      store.addEvent(runId, 'info', 'action_succeeded', action.label);
+    }
+    if (lost === undefined || failedA === undefined || failedB === undefined) {
+      throw new Error('the demo plan has too few executable actions');
+    }
+    store.markInFlight(runId, lost.id);
+    store.markSucceeded(runId, lost.id, { destinationId: 'failed_lost' });
+    store.addEvent(runId, 'info', 'action_reconciled', `${lost.label}: found`);
+    for (const action of [failedA, failedB]) {
+      store.markInFlight(runId, action.id);
+      store.markFailed(runId, action.id, 'failed', {
+        code: 'HTTP_500',
+        message: 'The destination answered HTTP 500.',
+      });
+      store.addEvent(runId, 'error', 'action_failed', `${action.label}: HTTP 500`);
+    }
+    if (blocked !== undefined) {
+      store.markFailed(runId, blocked.id, 'blocked', {
+        code: 'DEPENDENCY_FAILED',
+        message: 'A prerequisite action did not succeed.',
+      });
+    }
+    if (unknown !== undefined) {
+      store.markInFlight(runId, unknown.id);
+      store.markFailed(runId, unknown.id, 'ambiguous', {
+        code: 'INTERRUPTED',
+        message: 'The process stopped while this write was in flight.',
+      });
+    }
+    const reason = 'Stopped after 2 consecutive failures.';
+    store.addEvent(runId, 'error', 'run_stopped', reason);
+    store.setRunStatus(runId, 'failed', {
+      stopReason: reason,
+      finishedAt: new Date().toISOString(),
+    });
+  } finally {
+    store.close();
+  }
+}
+
 export function demoPlanPath(demoDir: string): string {
   return join(demoDir, '.exitos', 'demo', 'migration-plan.json');
 }

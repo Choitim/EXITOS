@@ -7,6 +7,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:demo": "vite build --mode demo",
+    "preview:demo": "vite preview --mode demo --base /EXITOS/",
     "dev": "vite",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

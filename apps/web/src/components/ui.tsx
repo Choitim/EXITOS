@@ -1,7 +1,14 @@
 import { useId, useState, type ReactNode } from 'react';
+import { useTourHighlight } from '../hooks/TourContext';
 import { copyText } from '../lib/browser';
 import type { Tone } from '../lib/format';
-import { outcomeMeta, type IconName } from '../lib/outcomes';
+import {
+  outcomeMeta,
+  runStatusStyle,
+  STATE_META,
+  type IconName,
+  type StateKey,
+} from '../lib/outcomes';
 
 // ---- icons -------------------------------------------------------------------------------------
 
@@ -27,6 +34,35 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
       <path d="M8 7.2v3.6M8 5.1v.1" />
     </>
   ),
+  // Run-level states: a shield with a check (Verified) and a stop sign (Failed).
+  verified: (
+    <>
+      <path d="M8 1.8l5 1.9v4.1c0 2.9-2.1 5-5 6.4-2.9-1.4-5-3.5-5-6.4V3.7z" />
+      <path d="M5.6 8.1l1.8 1.8 3.2-3.5" />
+    </>
+  ),
+  failed: (
+    <>
+      <path d="M5.4 1.8h5.2l3.6 3.6v5.2l-3.6 3.6H5.4l-3.6-3.6V5.4z" />
+      <path d="M8 4.9v3.7M8 11v.1" />
+    </>
+  ),
+  plus: <path d="M8 3.2v9.6M3.2 8h9.6" />,
+  link: (
+    <>
+      <path d="M6.9 9.1a2.6 2.6 0 0 0 3.7 0l2-2a2.6 2.6 0 0 0-3.7-3.7l-.6.6" />
+      <path d="M9.1 6.9a2.6 2.6 0 0 0-3.7 0l-2 2a2.6 2.6 0 0 0 3.7 3.7l.6-.6" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 4.6V8l2.3 1.4" />
+    </>
+  ),
+  flag: <path d="M3.5 14V2.5M3.5 3h8.4l-1.6 2.6 1.6 2.6H3.5" />,
+  play: <path d="M5 3l7 5-7 5z" />,
+  chevron: <path d="M4 6l4 4 4-4" />,
 };
 
 /** Decorative icon: the meaning is always repeated in text next to it. */
@@ -69,35 +105,99 @@ export const TONE_TEXT: Record<Tone, string> = {
   neutral: 'text-muted',
 };
 
+/** Strong, filled chips: only the two run-level states (Failed, Verified) use them. */
+const SOLID_CHIP: Partial<Record<Tone, string>> = { ok: 'chip-solid-ok', bad: 'chip-solid-bad' };
+
 export function Chip({
   tone,
   icon,
   children,
   className = '',
   title,
+  solid = false,
 }: {
   tone: Tone;
   icon?: IconName;
   children: ReactNode;
   className?: string;
   title?: string;
+  solid?: boolean;
 }) {
   return (
-    <span className={`chip ${TONE_CHIP[tone]} ${className}`} title={title}>
+    <span
+      className={`chip ${(solid && SOLID_CHIP[tone]) || TONE_CHIP[tone]} ${className}`}
+      title={title}
+    >
       {icon ? <Icon name={icon} /> : null}
       <span>{children}</span>
     </span>
   );
 }
 
-/** Outcome as icon + word, never colour alone. */
-export function OutcomeChip({ outcome }: { outcome: string }) {
+/**
+ * Outcome as icon + word, never colour alone. With `withPlain` the plain-language sub-label
+ * ("loses detail") is printed next to the name.
+ */
+export function OutcomeChip({
+  outcome,
+  withPlain = false,
+}: {
+  outcome: string;
+  withPlain?: boolean;
+}) {
   const meta = outcomeMeta(outcome);
-  return (
-    <Chip tone={meta.tone} icon={meta.icon} title={meta.plain}>
+  const chip = (
+    <Chip tone={meta.tone} icon={meta.icon} title={meta.plain} solid={meta.solid}>
       {meta.label}
     </Chip>
   );
+  if (!withPlain) return chip;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
+      {chip}
+      <span className="text-xs text-muted">{meta.plain}</span>
+    </span>
+  );
+}
+
+/** One of the six legend states (including the two run-level ones) as icon + word. */
+export function StateChip({ state, withPlain = false }: { state: StateKey; withPlain?: boolean }) {
+  const meta = STATE_META[state];
+  const chip = (
+    <Chip tone={meta.tone} icon={meta.icon} title={meta.plain} solid={meta.solid}>
+      {meta.label}
+    </Chip>
+  );
+  if (!withPlain) return chip;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
+      {chip}
+      <span className="text-xs text-muted">{meta.plain}</span>
+    </span>
+  );
+}
+
+/** A run status ("Applying", "Verified", "Verification failed") with its icon. */
+export function RunStatusChip({
+  status,
+  label,
+  tone,
+}: {
+  status: string;
+  label: string;
+  tone: Tone;
+}) {
+  const style = runStatusStyle(status);
+  return (
+    <Chip tone={tone} icon={style.icon} solid={style.solid} title={status}>
+      {label}
+    </Chip>
+  );
+}
+
+/** Grey placeholder block shown while data loads. Decorative: the page announces loading in text. */
+export function Skeleton({ className = '' }: { className?: string }) {
+  return <div className={`skeleton ${className}`} aria-hidden="true" />;
 }
 
 // ---- layout pieces -------------------------------------------------------------------------------
@@ -116,18 +216,32 @@ export function SectionShell({
   children: ReactNode;
 }) {
   const headingId = `${id}-heading`;
+  // Only the online demo's guided tour ever sets this; everywhere else it is `null`.
+  const tour = useTourHighlight();
+  const highlighted = tour !== null && tour.sectionId === id;
   return (
-    <section id={id} aria-labelledby={headingId} className="section">
-      <header className="mb-4">
+    <section
+      id={id}
+      aria-labelledby={headingId}
+      className={highlighted ? 'section tour-highlight' : 'section'}
+      data-tour-highlight={highlighted ? 'true' : undefined}
+    >
+      {highlighted ? (
+        <p className="tour-flag" data-testid="tour-flag">
+          <Icon name="flag" />
+          {tour.label}
+        </p>
+      ) : null}
+      <header className="mb-5">
         <h2 id={headingId} className="section-title">
           <span className="section-number" aria-hidden="true">
             {number}
           </span>
           {title}
         </h2>
-        {intro ? <p className="mt-1 max-w-3xl text-muted">{intro}</p> : null}
+        {intro ? <p className="section-intro">{intro}</p> : null}
       </header>
-      <div className="space-y-5">{children}</div>
+      <div className="space-y-6">{children}</div>
     </section>
   );
 }
@@ -149,7 +263,7 @@ export function Card({
   return (
     <div className={`card ${className}`}>
       {title || actions ? (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           {title ? <Heading className="card-title">{title}</Heading> : <span />}
           {actions}
         </div>
@@ -164,15 +278,23 @@ export function Stat({
   value,
   hint,
   testId,
+  icon,
+  iconTone = 'neutral',
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   testId?: string;
+  /** Optional icon before the label, so a state is never only a colour. */
+  icon?: IconName;
+  iconTone?: Tone;
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-sm text-muted">{label}</dt>
+      <dt className="flex items-center gap-1.5 text-sm text-muted">
+        {icon ? <Icon name={icon} className={TONE_TEXT[iconTone]} /> : null}
+        {label}
+      </dt>
       <dd className="text-xl font-semibold tabular-nums" data-testid={testId}>
         {value}
       </dd>
@@ -210,17 +332,25 @@ export function Callout({
   children,
   role,
   testId,
+  tourTarget,
 }: {
   tone: Tone;
   title: ReactNode;
   children?: ReactNode;
   role?: 'alert' | 'status';
   testId?: string;
+  /** Marks the callout as the thing the online demo's guided tour points at (styling only). */
+  tourTarget?: string;
 }) {
   const icon: IconName =
     tone === 'ok' ? 'check' : tone === 'bad' ? 'cross' : tone === 'warn' ? 'warning' : 'info';
   return (
-    <div className={`callout callout-${tone}`} role={role} data-testid={testId}>
+    <div
+      className={`callout callout-${tone}`}
+      role={role}
+      data-testid={testId}
+      data-tour-target={tourTarget}
+    >
       <Icon name={icon} className="callout-icon" />
       <div className="min-w-0">
         <p className="font-semibold">{title}</p>
@@ -230,11 +360,24 @@ export function Callout({
   );
 }
 
-export function Empty({ children }: { children: ReactNode }) {
+/** Dashed placeholder for a section that has nothing to show, with an optional bold lead line. */
+export function Empty({
+  children,
+  title,
+  testId,
+}: {
+  children: ReactNode;
+  title?: ReactNode;
+  testId?: string;
+}) {
   return (
-    <p className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-muted">
-      {children}
-    </p>
+    <div
+      className="rounded-lg border border-dashed border-edge px-4 py-6 text-center text-muted"
+      data-testid={testId}
+    >
+      {title ? <p className="mb-1 font-semibold text-fg">{title}</p> : null}
+      <div>{children}</div>
+    </div>
   );
 }
 
@@ -338,7 +481,12 @@ export function CommandLine({ command }: { command: string }) {
 /** Scrollable, keyboard-focusable block of pretty-printed JSON. */
 export function JsonBlock({ value, label }: { value: unknown; label: string }) {
   return (
-    <pre className="command max-h-72 overflow-auto" tabIndex={0} role="region" aria-label={label}>
+    <pre
+      className="command relative max-h-72 overflow-auto"
+      tabIndex={0}
+      role="region"
+      aria-label={label}
+    >
       <code>{JSON.stringify(value, null, 2)}</code>
     </pre>
   );

@@ -11,6 +11,8 @@
   },
   "scripts": {
     "build": "tsc -b && pnpm --filter @exitos/web build",
+    "build:demo": "node scripts/build-demo-state.mjs --preflight && pnpm --filter @exitos/web build:demo && node scripts/build-demo-state.mjs",
+    "preview:demo": "pnpm --filter @exitos/web preview:demo",
     "typecheck": "tsc -b && pnpm --filter @exitos/web typecheck",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -19,15 +21,16 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "exitos": "node apps/cli/dist/bin.js",
-    "demo": "node apps/cli/dist/bin.js demo",
+    "exitos": "node scripts/exitos.mjs",
+    "demo": "node scripts/exitos.mjs demo",
     "docs:assets": "node scripts/generate-demo-svg.mjs",
     "docs:screenshots": "playwright test --project=screenshots",
     "clean": "node scripts/clean.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:licenses": "node scripts/check-licenses.mjs",
     "sbom:generate": "node scripts/generate-sbom.mjs",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "docs:readme-assets": "node scripts/generate-readme-assets.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

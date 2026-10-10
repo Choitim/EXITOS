@@ -20,7 +20,7 @@
 
   --ok-fg: #166534;
   --ok-bg: #dcfce7;
-  --ok-bar: #16a34a;
+  --ok-bar: #15803d;
   --ok-text: #166534;
   --info-fg: #155e75;
   --info-bg: #cffafe;
@@ -28,7 +28,7 @@
   --info-text: #0e7490;
   --warn-fg: #854d0e;
   --warn-bg: #fef3c7;
-  --warn-bar: #d97706;
+  --warn-bar: #b45309;
   --warn-text: #92400e;
   --bad-fg: #991b1b;
   --bad-bg: #fee2e2;
@@ -37,6 +37,12 @@
   --neutral-fg: #374151;
   --neutral-bg: #e5e7eb;
   --neutral-bar: #6b7280;
+
+  /* The two run-level states (Verified, Failed) are filled chips so they never read as item outcomes. */
+  --ok-solid-bg: #166534;
+  --ok-solid-fg: #ffffff;
+  --bad-solid-bg: #991b1b;
+  --bad-solid-fg: #ffffff;
 
   --demo-bg: #fbbf24;
   --demo-fg: #1f1300;
@@ -77,6 +83,11 @@
     --neutral-fg: #d1d5db;
     --neutral-bg: #2b323b;
     --neutral-bar: #8b949e;
+
+    --ok-solid-bg: #4ade80;
+    --ok-solid-fg: #052e16;
+    --bad-solid-bg: #f87171;
+    --bad-solid-fg: #2a0707;
 
     --demo-bg: #fbbf24;
     --demo-fg: #1f1300;
@@ -215,10 +226,14 @@
   /* sections and cards */
   .section {
     @apply rounded-xl;
-    scroll-margin-top: calc(var(--header-h, 6rem) + 0.5rem);
+    /* --tour-h is only set by the online demo's guided tour (its sticky control bar). */
+    scroll-margin-top: calc(var(--header-h, 6rem) + var(--tour-h, 0px) + 0.5rem);
   }
   .section-title {
-    @apply flex items-center gap-2.5 text-2xl font-bold tracking-tight;
+    @apply flex items-center gap-2.5 text-xl font-bold tracking-tight sm:text-2xl;
+  }
+  .section-intro {
+    @apply mt-1 max-w-3xl text-muted;
   }
   .section-number {
     @apply inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-sunken text-sm font-semibold text-muted;
@@ -269,6 +284,14 @@
     background: var(--neutral-bg);
     color: var(--neutral-fg);
   }
+  .chip-solid-ok {
+    background: var(--ok-solid-bg);
+    color: var(--ok-solid-fg);
+  }
+  .chip-solid-bad {
+    background: var(--bad-solid-bg);
+    color: var(--bad-solid-fg);
+  }
 
   /* callouts */
   .callout {
@@ -308,10 +331,11 @@
     @apply inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md border border-edge bg-surface px-3 py-1.5 text-sm font-semibold text-fg;
     cursor: pointer;
   }
-  .btn:hover:not(:disabled) {
+  .btn:hover:not(:disabled, [aria-disabled='true']) {
     background: var(--sunken);
   }
-  .btn:disabled {
+  .btn:disabled,
+  .btn[aria-disabled='true'] {
     @apply cursor-not-allowed opacity-60;
   }
   .btn[aria-pressed='true'] {
@@ -324,7 +348,7 @@
     color: var(--accent-fg);
     border-color: var(--accent);
   }
-  .btn-primary:hover:not(:disabled) {
+  .btn-primary:hover:not(:disabled, [aria-disabled='true']) {
     background: var(--accent);
     filter: brightness(1.1);
   }
@@ -340,8 +364,13 @@
   }
 
   /* tables */
+  /*
+   * `relative` matters: screen-reader-only text is absolutely positioned, and an absolutely
+   * positioned box is only clipped by a scroller that is its containing block. Without it, such
+   * text inside a wide table would widen the whole page instead of scrolling with the table.
+   */
   .table-wrap {
-    @apply max-w-full overflow-x-auto rounded-lg border border-line bg-surface;
+    @apply relative max-w-full overflow-x-auto rounded-lg border border-line bg-surface;
   }
   .data-table {
     @apply w-full border-collapse text-left text-sm;
@@ -371,7 +400,7 @@
 
   /* command line */
   .command {
-    @apply m-0 whitespace-pre-wrap break-all rounded-md border border-line bg-sunken px-3 py-2;
+    @apply m-0 mb-2 whitespace-pre-wrap break-all rounded-md border border-line bg-sunken px-3 py-2;
   }
 
   /* markdown */
@@ -473,5 +502,226 @@
   }
   .bar-fill {
     background-color: var(--accent);
+  }
+}
+
+@layer components {
+  /* loading placeholders */
+  .skeleton {
+    @apply animate-pulse rounded-md;
+    background: var(--line);
+  }
+
+  /* disclosure (details/summary) with a chevron that turns */
+  .disclosure {
+    @apply flex cursor-pointer list-none items-center gap-2 rounded-md py-1 font-semibold;
+  }
+  .disclosure::-webkit-details-marker {
+    display: none;
+  }
+  .disclosure-icon {
+    @apply size-4 shrink-0 text-muted;
+    transition: transform 0.15s ease;
+  }
+  details:not([open]) > .disclosure .disclosure-icon {
+    transform: rotate(-90deg);
+  }
+
+  /* outcome filter chips: toggle buttons with a count */
+  .filter-chip {
+    @apply inline-flex min-h-9 items-center gap-1.5 rounded-full border border-edge bg-surface px-3 py-1 text-sm font-medium text-fg;
+    cursor: pointer;
+  }
+  .filter-chip:hover:not(:disabled, [aria-pressed='true']) {
+    background: var(--sunken);
+  }
+  .filter-chip:disabled {
+    @apply cursor-not-allowed text-muted;
+    border-style: dashed;
+  }
+  .filter-chip[aria-pressed='true'] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+    font-weight: 600;
+  }
+  .filter-chip-count {
+    @apply tabular-nums;
+    font-weight: 600;
+  }
+
+  /* legend */
+  .legend-list {
+    @apply m-0 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 xl:grid-cols-3;
+  }
+  .legend-list-compact {
+    @apply m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0;
+  }
+  .legend-item dt {
+    @apply m-0;
+  }
+  .legend-item dd {
+    @apply m-0 mt-1 text-sm text-muted;
+  }
+
+  /* stage tracker: vertical on phones, five columns on wide screens */
+  .stages {
+    @apply m-0 grid list-none grid-cols-1 gap-0 p-0 lg:grid-cols-5 lg:gap-3;
+  }
+  .stage {
+    @apply relative flex gap-3 pb-5 last:pb-0 lg:flex-col lg:gap-2 lg:rounded-lg lg:p-3;
+  }
+  .stage-current {
+    @apply lg:bg-sunken;
+  }
+  .stage-marker {
+    @apply relative z-10 inline-flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold;
+  }
+  /* the connector between markers: down the left on phones, across the top on wide screens */
+  .stage:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    top: 2rem;
+    height: calc(100% - 2rem);
+    border-left: 2px solid var(--line);
+    transform: translateX(-1px);
+  }
+  @media (min-width: 64rem) {
+    .stage:not(:last-child)::before {
+      left: 2.75rem;
+      top: 1.75rem;
+      width: calc(100% - 1.25rem);
+      height: 0;
+      border-left: 0;
+      border-top: 2px solid var(--line);
+      transform: translateY(-1px);
+    }
+  }
+  .stage-done:not(:last-child)::before {
+    border-color: var(--ok-bar);
+  }
+  .stage-marker-done {
+    background: var(--ok-bg);
+    border-color: var(--ok-bar);
+    color: var(--ok-fg);
+  }
+  .stage-marker-current {
+    background: var(--surface);
+    border-color: var(--accent);
+    color: var(--fg);
+  }
+  .stage-marker-waiting,
+  .stage-marker-active {
+    background: var(--info-bg);
+    border-color: var(--info-bar);
+    color: var(--info-fg);
+  }
+  .stage-marker-attention {
+    background: var(--warn-bg);
+    border-color: var(--warn-bar);
+    color: var(--warn-fg);
+  }
+  .stage-marker-failed {
+    background: var(--bad-solid-bg);
+    border-color: var(--bad-solid-bg);
+    color: var(--bad-solid-fg);
+  }
+  .stage-marker-verified {
+    background: var(--ok-solid-bg);
+    border-color: var(--ok-solid-bg);
+    color: var(--ok-solid-fg);
+  }
+  .stage-marker-upcoming {
+    background: var(--surface);
+    border-color: var(--edge);
+    border-style: dashed;
+    color: var(--muted);
+  }
+
+  /* rows of a table that need a look: a tint, plus icon and words in the row itself */
+  .row-attn-bad > th,
+  .row-attn-bad > td {
+    background: var(--bad-bg);
+    color: var(--bad-fg);
+  }
+  .row-attn-warn > th,
+  .row-attn-warn > td {
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+  }
+  .row-quiet > th,
+  .row-quiet > td {
+    color: var(--muted);
+  }
+}
+
+@layer components {
+  /* ---- online demo: guided tour -------------------------------------------------------------- */
+  .tour-panel {
+    @apply mb-0;
+    scroll-margin-top: calc(var(--header-h, 6rem) + 0.5rem);
+  }
+
+  /* the step list: one column on phones, then a wrapping grid */
+  .tour-steps {
+    @apply m-0 mb-5 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6;
+  }
+  .tour-step {
+    @apply min-w-0;
+  }
+  .tour-step-button {
+    @apply flex h-full w-full items-center gap-2.5 rounded-lg border border-line bg-surface px-3 py-2 text-left text-sm font-medium text-fg;
+    cursor: pointer;
+  }
+  .tour-step-button:hover {
+    background: var(--sunken);
+  }
+  .tour-step[aria-current='step'] .tour-step-button {
+    background: var(--sunken);
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+    font-weight: 700;
+  }
+  .tour-step-marker {
+    @apply inline-flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold;
+    border-color: var(--edge);
+    color: var(--muted);
+  }
+  .tour-step[aria-current='step'] .tour-step-marker {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-fg);
+  }
+  .tour-step-body {
+    @apply border-t border-line pt-4;
+  }
+
+  /*
+   * Back/Next. Sticky at the top AND the bottom of the viewport: it stays on screen while the tour
+   * scrolls the real sections into view, wherever its place in the page is relative to them.
+   */
+  .tour-bar {
+    @apply z-30 mb-8 mt-3 flex items-center gap-3 rounded-lg border border-edge bg-surface px-3 py-2;
+    position: sticky;
+    top: calc(var(--header-h, 6rem) + 0.25rem);
+    bottom: 0.5rem;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+  }
+
+  /* the section the tour currently points at */
+  .tour-highlight {
+    outline: 3px solid var(--accent);
+    outline-offset: 8px;
+  }
+  /* the recorded result inside the highlighted section */
+  .tour-highlight [data-tour-target='result'] {
+    outline: 3px solid var(--ok-bar);
+    outline-offset: 3px;
+  }
+  .tour-flag {
+    @apply mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    background: var(--accent);
+    color: var(--accent-fg);
   }
 }

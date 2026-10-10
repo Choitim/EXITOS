@@ -21,7 +21,7 @@ import {
   type OutcomeFilter,
 } from '../lib/derive';
 import { formatNumber, pluralize } from '../lib/format';
-import { outcomeMeta, severityMeta } from '../lib/outcomes';
+import { outcomeMeta, outcomeWithPlain, severityMeta } from '../lib/outcomes';
 
 function SeverityChip({ severity }: { severity: string }) {
   const meta = severityMeta(severity);
@@ -49,9 +49,9 @@ function PlanIssueList({ findings, tone }: { findings: Finding[]; tone: 'bad' | 
 
 const FILTER_OPTIONS: ReadonlyArray<{ value: OutcomeFilter; label: string }> = [
   { value: 'all', label: 'All outcomes' },
-  { value: 'unsupported', label: 'Unsupported (cannot move)' },
-  { value: 'lossy', label: 'Lossy (loses detail)' },
-  { value: 'transformed', label: 'Transformed (changes shape)' },
+  { value: 'unsupported', label: outcomeWithPlain('unsupported') },
+  { value: 'lossy', label: outcomeWithPlain('lossy') },
+  { value: 'transformed', label: outcomeWithPlain('transformed') },
 ];
 
 export function Unsupported({ state, plan }: { state: DashboardState; plan: MigrationPlan }) {
@@ -78,7 +78,7 @@ export function Unsupported({ state, plan }: { state: DashboardState; plan: Migr
       id="unsupported"
       number={5}
       title="Unsupported content"
-      intro="Everything that cannot move, loses detail or changes shape. Nothing is dropped silently: each entry is a recorded finding."
+      intro="Everything that cannot move (Unsupported), loses detail (Requires review) or changes shape (Transformed). Nothing is dropped silently: each entry is a recorded finding."
     >
       {issues.errors.length > 0 ? (
         <Callout
@@ -190,11 +190,14 @@ export function Unsupported({ state, plan }: { state: DashboardState; plan: Migr
       </Card>
 
       {groups.length === 0 ? (
-        <Empty>
-          {all.length === 0
-            ? 'The plan recorded no findings.'
-            : 'No finding matches these filters.'}
-        </Empty>
+        all.length === 0 ? (
+          <Empty title="The plan recorded no findings" testId="findings-empty">
+            Nothing was reported as unsupported, needing review or transformed. That describes this
+            plan only; the standing limits below still apply.
+          </Empty>
+        ) : (
+          <Empty>No finding matches these filters.</Empty>
+        )
       ) : (
         groups.map((group) => {
           const meta = outcomeMeta(group.outcome);
@@ -207,7 +210,7 @@ export function Unsupported({ state, plan }: { state: DashboardState; plan: Migr
             >
               <h3
                 id={headingId}
-                className="flex flex-wrap items-center gap-2 text-lg font-semibold"
+                className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-lg font-semibold"
               >
                 <Icon name={meta.icon} className={`size-5 ${TONE_TEXT[meta.tone]}`} />
                 {meta.label}

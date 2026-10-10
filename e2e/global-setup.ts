@@ -7,19 +7,37 @@
  *   xss    a live-mode plan whose text fields carry hostile payloads, then `exitos ui`
  *   live   a run that is still `applying`, to test polling
  *   empty  an empty directory, to test the empty state
+ *   planned  a plan nobody approved: no run
+ *   applied  every action written, never verified
+ *   failed   a run that stopped with failed, blocked and ambiguous actions
+ *   static   apps/web/dist-demo (the online demo) behind a header-less file server on a sub-path;
+ *            built here with `pnpm build:demo` only when it is missing
  */
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CLI_BIN, CORE_DIST, ENV, WEB_DIST_INDEX } from './support/paths.js';
+import {
+  CLI_BIN,
+  CORE_DIST,
+  DEMO_DIST,
+  DEMO_DIST_INDEX,
+  DEMO_STATE_FILE,
+  ENV,
+  ROOT,
+  WEB_DIST_INDEX,
+} from './support/paths.js';
+import { startStaticSite } from './support/static-server.js';
 import {
   buildHostilePlan,
   demoPlanPath,
   readPlan,
+  seedAppliedUnverified,
+  seedFailedRun,
   seedHostileState,
   seedLiveRun,
+  seedPlannedOnly,
 } from './support/states.js';
 
 interface Server {
@@ -96,12 +114,24 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     if (!existsSync(file)) throw new Error(`Missing ${file}: ${hint} first.`);
   }
 
+  // The online demo is built on demand: CI builds it explicitly, a local run builds it once.
+  if (!existsSync(DEMO_DIST_INDEX) || !existsSync(DEMO_STATE_FILE)) {
+    const build = spawnSync('pnpm', ['run', 'build:demo'], {
+      cwd: ROOT,
+      stdio: 'inherit',
+      shell: process.platform === 'win32',
+    });
+    if (build.status !== 0) throw new Error('`pnpm build:demo` failed; see its output above.');
+  }
+
   const root = mkdtempSync(join(tmpdir(), 'exitos-e2e-'));
   const home = join(root, 'home');
   mkdirSync(home);
   const servers: Server[] = [];
+  const closers: Array<() => Promise<void>> = [];
   const teardown = async (): Promise<void> => {
     for (const { child } of servers) child.kill('SIGTERM');
+    await Promise.all(closers.map((close) => close()));
     await new Promise((resolve) => setTimeout(resolve, 200));
     rmSync(root, { recursive: true, force: true });
   };
@@ -148,6 +178,35 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     const emptyServer = await startUi(emptyDir, [], home);
     servers.push(emptyServer);
     process.env[ENV.empty] = emptyServer.url;
+
+    // 5. a plan that was never approved.
+    const plannedDir = join(root, 'planned');
+    mkdirSync(plannedDir);
+    seedPlannedOnly(join(plannedDir, '.exitos', 'state.db'), demoPlan);
+    const plannedServer = await startUi(plannedDir, [], home);
+    servers.push(plannedServer);
+    process.env[ENV.planned] = plannedServer.url;
+
+    // 6. applied but never verified.
+    const appliedDir = join(root, 'applied');
+    mkdirSync(appliedDir);
+    seedAppliedUnverified(join(appliedDir, '.exitos', 'state.db'), demoPlan);
+    const appliedServer = await startUi(appliedDir, [], home);
+    servers.push(appliedServer);
+    process.env[ENV.applied] = appliedServer.url;
+
+    // 7. a run that stopped with failures.
+    const failedDir = join(root, 'failed');
+    mkdirSync(failedDir);
+    seedFailedRun(join(failedDir, '.exitos', 'state.db'), demoPlan);
+    const failedServer = await startUi(failedDir, [], home);
+    servers.push(failedServer);
+    process.env[ENV.failed] = failedServer.url;
+
+    // 8. the static online demo, under a sub-path, with no headers.
+    const site = await startStaticSite(DEMO_DIST);
+    closers.push(site.close);
+    process.env[ENV.staticDemo] = site.url;
   } catch (error) {
     await teardown();
     throw error;

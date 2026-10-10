@@ -17,6 +17,8 @@ export interface CliContext {
   io: CliIo;
   style: Style;
   width: number;
+  /** `process.platform`; a field so platform-specific hints can be tested. */
+  platform: NodeJS.Platform;
   /** Test seams — never set by the real binary. */
   overrides?: {
     clock?: Clock;
@@ -28,13 +30,19 @@ export interface CliContext {
   signal?: AbortSignal;
 }
 
+/** `COLUMNS` is honoured when output is piped (a TTY reports its own width). */
+function columnsFromEnv(value: string | undefined): number | undefined {
+  const n = Number.parseInt(value ?? '', 10);
+  return Number.isInteger(n) && n >= 40 && n <= 400 ? n : undefined;
+}
+
 export function createNodeIo(): CliIo {
   return {
     stdout: (t) => void process.stdout.write(t),
     stderr: (t) => void process.stderr.write(t),
     stdoutIsTTY: process.stdout.isTTY === true,
     stdinIsTTY: process.stdin.isTTY === true,
-    columns: process.stdout.columns ?? 100,
+    columns: process.stdout.columns ?? columnsFromEnv(process.env.COLUMNS) ?? 100,
     async prompt(question) {
       const { createInterface } = await import('node:readline/promises');
       const rl = createInterface({ input: process.stdin, output: process.stderr });
@@ -54,6 +62,7 @@ export function createContext(input: {
   noColor?: boolean | undefined;
   overrides?: CliContext['overrides'];
   signal?: AbortSignal | undefined;
+  platform?: NodeJS.Platform | undefined;
 }): CliContext {
   const color = shouldUseColor({
     noColorFlag: input.noColor,
@@ -66,6 +75,7 @@ export function createContext(input: {
     io: input.io,
     style: createStyle(color),
     width: Math.max(60, Math.min(input.io.columns, 120)),
+    platform: input.platform ?? process.platform,
     ...(input.overrides === undefined ? {} : { overrides: input.overrides }),
     ...(input.signal === undefined ? {} : { signal: input.signal }),
   };

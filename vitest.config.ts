@@ -46,6 +46,7 @@ export default defineConfig({
     ],
   },
   test: {
+    globalSetup: ['./vitest.global-setup.ts'],
     include: [
       'packages/*/test/**/*.test.ts',
       'apps/*/test/**/*.test.ts',
@@ -58,9 +59,9 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text-summary', 'json-summary', 'lcov'],
       reportsDirectory: 'coverage',
-      // A floor just under what is measured today (88 / 76 / 89 / 90 %): it stops quiet regressions
+      // A floor just under what is measured today (90 / 78 / 92 / 91 %): it stops quiet regressions
       // without failing on noise. Raise it as coverage improves; never lower it to make a build pass.
-      thresholds: { statements: 86, branches: 74, functions: 87, lines: 87 },
+      thresholds: { statements: 88, branches: 76, functions: 90, lines: 89 },
       // What ships: the library packages, the CLI and the dashboard. In-process fakes, fixtures and
       // type-only files are test infrastructure, not product, so they do not count.
       include: [

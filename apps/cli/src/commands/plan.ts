@@ -5,10 +5,16 @@ import { eprintln, println, type CliContext } from '../context.js';
 import { createRuntime } from '../runtime/runtime.js';
 import { openStore, resolveStateDir } from '../runtime/state.js';
 import { planView } from '../ui/views.js';
-import { loadConfigFile, recorderLine, viewOptions, writeArtifact } from './shared.js';
+import {
+  loadConfigFile,
+  recorderLine,
+  resolveConfigPath,
+  viewOptions,
+  writeArtifact,
+} from './shared.js';
 
 export interface PlanOptions {
-  config: string;
+  config?: string | undefined;
   out?: string | undefined;
   json?: boolean | undefined;
   summary?: boolean | undefined;
@@ -24,14 +30,22 @@ export async function planCommand(
   destination: string,
   options: PlanOptions,
 ): Promise<number> {
-  const config = loadConfigFile(ctx, options.config);
+  const configPath = resolveConfigPath(ctx, options.config, `plan ${source} ${destination}`);
+  const config = loadConfigFile(ctx, configPath);
   if (config.source.type !== source || config.destination.type !== destination) {
     throw new ConfigError(
-      `The command says ${source} → ${destination}, but ${options.config} is configured for ${config.source.type} → ${config.destination.type}.`,
+      `The command says ${source} → ${destination}, but ${configPath} is configured for ${config.source.type} → ${config.destination.type}.`,
     );
   }
   const location = resolveStateDir(ctx, { stateDir: options.stateDir });
   const rt = createRuntime(ctx, { mode: 'live', location, verbose: options.verbose });
+  try {
+    // Everything wrong with the config is reported at once, before any file is touched or API called.
+    rt.checkConfig(config);
+  } catch (error) {
+    rt.dispose();
+    throw error;
+  }
   const store = openStore(location);
   try {
     const sourceRecorder = new RequestRecorder();

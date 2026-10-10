@@ -5,6 +5,8 @@ import tseslint from 'typescript-eslint';
 export default defineConfig(
   globalIgnores([
     '**/dist/**',
+    // the static online demo build (apps/web/dist-demo): generated, minified
+    '**/dist-demo/**',
     '**/dist-test/**',
     '**/node_modules/**',
     '**/coverage/**',
@@ -21,7 +23,12 @@ export default defineConfig(
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['*.config.ts', '*.config.js', 'scripts/*.mjs'],
+          allowDefaultProject: [
+            '*.config.ts',
+            '*.config.js',
+            'scripts/*.mjs',
+            'vitest.global-setup.ts',
+          ],
         },
         tsconfigRootDir: import.meta.dirname,
       },

@@ -1,16 +1,8 @@
 import type { DashboardState, MigrationPlan } from '@exitos/core/schema';
+import { ApprovalPanel } from '../components/ApprovalPanel';
+import { StageTracker } from '../components/StageTracker';
+import { Callout, Card, Chip, Facts, RunStatusChip, SectionShell, Stat } from '../components/ui';
 import {
-  Callout,
-  Card,
-  Chip,
-  CommandLine,
-  CopyButton,
-  Facts,
-  SectionShell,
-  Stat,
-} from '../components/ui';
-import {
-  approveCommand,
   describeReportState,
   describeRunStatus,
   formatDateTime,
@@ -44,7 +36,7 @@ const RUN_COUNT_ROWS: ReadonlyArray<{
   { key: 'in_flight', label: 'in flight', tone: 'info', icon: 'transform' },
   { key: 'ambiguous', label: 'ambiguous', tone: 'warn', icon: 'warning' },
   { key: 'blocked', label: 'blocked', tone: 'warn', icon: 'warning' },
-  { key: 'failed', label: 'failed', tone: 'bad', icon: 'cross' },
+  { key: 'failed', label: 'failed', tone: 'bad', icon: 'failed' },
 ];
 
 export function Overview({ state, plan }: { state: DashboardState; plan: MigrationPlan }) {
@@ -52,7 +44,6 @@ export function Overview({ state, plan }: { state: DashboardState; plan: Migrati
   const wording = report ? describeReportState(report.state) : null;
   const progress = run ? runProgress(run.counts) : null;
   const summary = plan.summary;
-  const command = approveCommand(plan.planId);
 
   return (
     <SectionShell
@@ -80,7 +71,13 @@ export function Overview({ state, plan }: { state: DashboardState; plan: Migrati
         </Callout>
       )}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <Card title="Where this migration is">
+        <StageTracker state={state} plan={plan} />
+      </Card>
+
+      <ApprovalPanel state={state} plan={plan} />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card title="Plan">
           <Facts
             rows={[
@@ -111,15 +108,6 @@ export function Overview({ state, plan }: { state: DashboardState; plan: Migrati
               ['Warnings', formatNumber(summary.warnings)],
             ]}
           />
-          <div className="mt-4 space-y-2 border-t border-line pt-4">
-            <p className="font-medium">Approve this plan</p>
-            <p className="text-sm text-muted">
-              This dashboard is read-only and cannot approve or apply anything. Review the plan
-              first, then run this command yourself. It writes to the destination.
-            </p>
-            <CommandLine command={command} />
-            <CopyButton text={command} label="Copy approve command" testId="copy-approve" />
-          </div>
         </Card>
 
         <Card title="Run">
@@ -135,9 +123,12 @@ export function Overview({ state, plan }: { state: DashboardState; plan: Migrati
                   ],
                   [
                     'Status',
-                    <Chip key="s" tone={describeRunStatus(run.status).tone} title={run.status}>
-                      {describeRunStatus(run.status).label}
-                    </Chip>,
+                    <RunStatusChip
+                      key="s"
+                      status={run.status}
+                      label={describeRunStatus(run.status).label}
+                      tone={describeRunStatus(run.status).tone}
+                    />,
                   ],
                   ['Approved', <Time key="a" iso={run.approvedAt} />],
                   ['Started', <Time key="st" iso={run.startedAt} />],
@@ -147,7 +138,12 @@ export function Overview({ state, plan }: { state: DashboardState; plan: Migrati
                     'Actions',
                     <span key="c" className="flex flex-wrap gap-1.5" data-testid="run-counts">
                       {RUN_COUNT_ROWS.filter((row) => run.counts[row.key] > 0).map((row) => (
-                        <Chip key={row.key} tone={row.tone} icon={row.icon}>
+                        <Chip
+                          key={row.key}
+                          tone={row.tone}
+                          icon={row.icon}
+                          solid={row.key === 'failed'}
+                        >
                           {formatNumber(run.counts[row.key])} {row.label}
                         </Chip>
                       ))}

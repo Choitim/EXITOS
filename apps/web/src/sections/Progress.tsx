@@ -8,10 +8,12 @@ import {
   Chip,
   Empty,
   Icon,
+  RunStatusChip,
   SectionShell,
   TONE_TEXT,
   TableWrap,
 } from '../components/ui';
+import { describeEvent, eventLevelChip } from '../lib/events';
 import {
   describeRunStatus,
   formatDateTime,
@@ -25,12 +27,17 @@ import {
 } from '../lib/format';
 import type { IconName } from '../lib/outcomes';
 
+/**
+ * `attention` decides how a row looks when its count is above zero: `bad` is the Failed style,
+ * `warn` is the Requires-attention style. At zero every row is quiet.
+ */
 const STATUS_ROWS: ReadonlyArray<{
   key: keyof RunCounts;
   label: string;
   tone: Tone;
   icon: IconName;
   meaning: string;
+  attention?: 'bad' | 'warn';
 }> = [
   {
     key: 'succeeded',
@@ -60,6 +67,7 @@ const STATUS_ROWS: ReadonlyArray<{
     tone: 'warn',
     icon: 'warning',
     meaning: 'the outcome of the write is unknown',
+    attention: 'warn',
   },
   {
     key: 'blocked',
@@ -67,20 +75,62 @@ const STATUS_ROWS: ReadonlyArray<{
     tone: 'warn',
     icon: 'warning',
     meaning: 'a dependency failed, so not attempted',
+    attention: 'warn',
   },
-  { key: 'failed', label: 'Failed', tone: 'bad', icon: 'cross', meaning: 'the write failed' },
+  {
+    key: 'failed',
+    label: 'Failed',
+    tone: 'bad',
+    icon: 'failed',
+    meaning: 'the write failed',
+    attention: 'bad',
+  },
 ];
 
-const LEVEL: Record<RunEvent['level'], { label: string; tone: Tone; icon: IconName }> = {
-  info: { label: 'info', tone: 'neutral', icon: 'info' },
-  warn: { label: 'warn', tone: 'warn', icon: 'warning' },
-  error: { label: 'error', tone: 'bad', icon: 'cross' },
-};
+function StatusRow({ row, count }: { row: (typeof STATUS_ROWS)[number]; count: number }) {
+  const attention = row.attention !== undefined && count > 0 ? row.attention : null;
+  const quiet = row.attention !== undefined && count === 0;
+  return (
+    <tr
+      className={
+        attention === 'bad'
+          ? 'row-attn-bad'
+          : attention === 'warn'
+            ? 'row-attn-warn'
+            : quiet
+              ? 'row-quiet'
+              : undefined
+      }
+      data-testid={`status-row-${row.key}`}
+      data-attention={attention ?? 'none'}
+    >
+      <th scope="row">
+        {attention === 'bad' ? (
+          <Chip tone="bad" icon="failed" solid>
+            Failed
+          </Chip>
+        ) : (
+          <span className="inline-flex items-center gap-1.5">
+            <Icon name={row.icon} className={quiet ? '' : TONE_TEXT[row.tone]} />
+            <span className={attention ? '' : quiet ? 'font-medium' : 'text-fg'}>{row.label}</span>
+          </span>
+        )}
+        {attention !== null ? <span className="sr-only"> (needs attention)</span> : null}
+      </th>
+      <td>{row.meaning}</td>
+      <td className={`num ${attention ? 'font-bold' : ''}`} data-testid={`count-${row.key}`}>
+        {formatNumber(count)}
+      </td>
+    </tr>
+  );
+}
 
 const EventLog = memo(function EventLog({ events }: { events: RunEvent[] }) {
   const [autoScroll, setAutoScroll] = useState(true);
+  const [technical, setTechnical] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const toggleId = useId();
+  const technicalId = useId();
   const last = events[events.length - 1]?.id;
 
   useEffect(() => {
@@ -92,27 +142,51 @@ const EventLog = memo(function EventLog({ events }: { events: RunEvent[] }) {
     <Card
       title={`Event log (${formatNumber(events.length)}${events.length >= 250 ? ', latest 250' : ''})`}
       actions={
-        <label htmlFor={toggleId} className="inline-flex cursor-pointer items-center gap-2 text-sm">
-          <input
-            id={toggleId}
-            type="checkbox"
-            className="size-4 accent-[var(--accent)]"
-            checked={autoScroll}
-            onChange={(e) => {
-              setAutoScroll(e.target.checked);
-            }}
-            data-testid="autoscroll"
-          />
-          Auto-scroll to newest
-        </label>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+          <label
+            htmlFor={technicalId}
+            className="inline-flex cursor-pointer items-center gap-2 text-sm"
+          >
+            <input
+              id={technicalId}
+              type="checkbox"
+              className="size-4 accent-[var(--accent)]"
+              checked={technical}
+              onChange={(e) => {
+                setTechnical(e.target.checked);
+              }}
+              data-testid="event-technical"
+            />
+            Show technical details
+          </label>
+          <label
+            htmlFor={toggleId}
+            className="inline-flex cursor-pointer items-center gap-2 text-sm"
+          >
+            <input
+              id={toggleId}
+              type="checkbox"
+              className="size-4 accent-[var(--accent)]"
+              checked={autoScroll}
+              onChange={(e) => {
+                setAutoScroll(e.target.checked);
+              }}
+              data-testid="autoscroll"
+            />
+            Auto-scroll to newest
+          </label>
+        </div>
       }
     >
       {events.length === 0 ? (
-        <Empty>No events yet.</Empty>
+        <Empty title="No events yet" testId="events-empty">
+          Events appear here as soon as a run is approved: each write, each recovery after a lost
+          reply and the verification result.
+        </Empty>
       ) : (
         <div
           ref={boxRef}
-          className="max-h-96 overflow-auto rounded-md border border-line"
+          className="relative max-h-96 overflow-auto rounded-md border border-line"
           role="log"
           aria-label="Run events, newest last"
           tabIndex={0}
@@ -123,28 +197,41 @@ const EventLog = memo(function EventLog({ events }: { events: RunEvent[] }) {
             <thead>
               <tr>
                 <th scope="col">Time</th>
-                <th scope="col">Level</th>
-                <th scope="col">Type</th>
+                <th scope="col">Event</th>
                 <th scope="col">Message</th>
               </tr>
             </thead>
             <tbody>
               {events.map((event) => {
-                const level = LEVEL[event.level] as (typeof LEVEL)[RunEvent['level']] | undefined;
+                const info = describeEvent(event);
+                const chip = eventLevelChip(event.level);
                 return (
-                  <tr key={event.id}>
+                  <tr key={event.id} data-testid="event-row" data-event-type={event.type}>
                     <td className="whitespace-nowrap tabular-nums">
                       <time dateTime={event.ts} title={event.ts}>
                         {formatTime(event.ts)}
                       </time>
                     </td>
                     <td>
-                      <Chip tone={level?.tone ?? 'neutral'} icon={level?.icon ?? 'info'}>
-                        {level?.label ?? event.level}
-                      </Chip>
-                    </td>
-                    <td>
-                      <code>{event.type}</code>
+                      <span
+                        className="inline-flex flex-wrap items-center gap-x-2 gap-y-1"
+                        title={`Event type: ${event.type}`}
+                      >
+                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                          <Icon name={info.icon} className={TONE_TEXT[info.tone]} />
+                          <span data-testid="event-label">{info.label}</span>
+                        </span>
+                        {chip ? (
+                          <Chip tone={chip.tone} icon={chip.icon}>
+                            {chip.label}
+                          </Chip>
+                        ) : null}
+                      </span>
+                      {technical ? (
+                        <code className="mt-0.5 block text-xs text-muted" data-testid="event-type">
+                          {event.type}
+                        </code>
+                      ) : null}
                     </td>
                     <td className="min-w-64">{event.message}</td>
                   </tr>
@@ -166,6 +253,7 @@ function pollingText(pollMs: number | null, runStatus: string | undefined): stri
 
 export function Progress({ state, plan }: { state: DashboardState; plan: MigrationPlan }) {
   const store = useLive();
+  const recording = store.recording;
   const { run, events, runs } = state;
   const progress = run ? runProgress(run.counts) : null;
   const status = run ? describeRunStatus(run.status) : null;
@@ -175,30 +263,35 @@ export function Progress({ state, plan }: { state: DashboardState; plan: Migrati
       id="progress"
       number={6}
       title="Migration progress"
-      intro="Live view of the run. Updates itself; nothing on this page can start, stop or change a run."
+      intro={
+        recording?.intro ??
+        'Live view of the run. Updates itself; nothing on this page can start, stop or change a run.'
+      }
     >
       <Card
-        title="Live status"
+        title={recording?.cardTitle ?? 'Live status'}
         actions={
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span data-testid="last-updated">
-              Last updated:{' '}
-              {store.lastUpdated ? (
-                <time dateTime={store.lastUpdated.toISOString()}>
-                  {formatTime(store.lastUpdated.toISOString())} {timeZoneLabel()}
-                </time>
-              ) : (
-                'never'
-              )}
-            </span>
-            <Button onClick={store.refresh} disabled={store.refreshing} testId="refresh">
-              {store.refreshing ? 'Refreshing…' : 'Refresh now'}
-            </Button>
-          </div>
+          recording ? undefined : (
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <span data-testid="last-updated">
+                Last updated:{' '}
+                {store.lastUpdated ? (
+                  <time dateTime={store.lastUpdated.toISOString()}>
+                    {formatTime(store.lastUpdated.toISOString())} {timeZoneLabel()}
+                  </time>
+                ) : (
+                  'never'
+                )}
+              </span>
+              <Button onClick={store.refresh} disabled={store.refreshing} testId="refresh">
+                {store.refreshing ? 'Refreshing…' : 'Refresh now'}
+              </Button>
+            </div>
+          )
         }
       >
         <p className="mb-3 text-sm text-muted" data-testid="polling-text">
-          {pollingText(store.pollMs, run?.status)}
+          {recording?.note ?? pollingText(store.pollMs, run?.status)}
         </p>
         {run === null || progress === null || status === null ? (
           <Callout tone="info" title="No run yet">
@@ -210,9 +303,7 @@ export function Progress({ state, plan }: { state: DashboardState; plan: Migrati
         ) : (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Chip tone={status.tone} title={run.status}>
-                {status.label}
-              </Chip>
+              <RunStatusChip status={run.status} label={status.label} tone={status.tone} />
               <span className="text-sm text-muted">
                 Run <code>{run.runId}</code>
               </span>
@@ -268,18 +359,7 @@ export function Progress({ state, plan }: { state: DashboardState; plan: Migrati
                 </thead>
                 <tbody>
                   {STATUS_ROWS.map((row) => (
-                    <tr key={row.key}>
-                      <th scope="row">
-                        <span className={`inline-flex items-center gap-1.5 ${TONE_TEXT[row.tone]}`}>
-                          <Icon name={row.icon} />
-                          <span className="text-fg">{row.label}</span>
-                        </span>
-                      </th>
-                      <td>{row.meaning}</td>
-                      <td className="num" data-testid={`count-${row.key}`}>
-                        {formatNumber(run.counts[row.key])}
-                      </td>
-                    </tr>
+                    <StatusRow key={row.key} row={row} count={run.counts[row.key]} />
                   ))}
                 </tbody>
               </table>

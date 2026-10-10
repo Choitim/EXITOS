@@ -19,6 +19,7 @@ import { eprintln, println, type CliContext } from '../context.js';
 import { createRuntime, type Runtime } from '../runtime/runtime.js';
 import { openStore, resetDemoState, resolveStateDir } from '../runtime/state.js';
 import { box, keyValues } from '../ui/layout.js';
+import { wrap, type Style } from '../ui/style.js';
 import { approvalView, banner, planView, reportView, step, verificationView } from '../ui/views.js';
 import { configFromPlan } from './apply.js';
 import { reportFor } from './inspect-status-verify-report.js';
@@ -234,20 +235,29 @@ export async function demoCommand(ctx: CliContext, options: DemoOptions): Promis
     say('');
     say(reportView(report, vo, { limitPerGroup: 6 }));
     say('');
+    const boxWidth = Math.min(ctx.width, 96);
     say(
       box(
         [
           style.bold('That was an offline demo: synthetic data, in-process fake APIs.'),
-          'It proves the engine, not your workspace. A real run needs your own tokens and',
-          'a sandbox first — see docs/live-sandbox-testing.md.',
+          ...wrap(
+            'It proves the engine, not your workspace. A real run needs your own tokens and a sandbox first: see docs/live-sandbox-testing.md.',
+            boxWidth - 4,
+          ),
           '',
-          `${style.cyan(`${BIN_NAME} ui --demo`)}                      explore this run in the local dashboard`,
-          `${style.cyan(`${BIN_NAME} report --demo --format markdown`)}  the shareable report`,
-          `${style.cyan(`${BIN_NAME} inspect notion --demo`)}           every property and how it fares`,
-          `${style.cyan(`${BIN_NAME} demo --interrupt-after 40`)}        crash mid-run, then ${style.cyan(`${BIN_NAME} resume --demo`)}`,
+          ...nextSteps(style, boxWidth - 4, [
+            [`${BIN_NAME} ui --demo`, 'explore this run in the local dashboard'],
+            [`${BIN_NAME} report --demo --format markdown`, 'the shareable report'],
+            [`${BIN_NAME} inspect notion --demo`, 'every property and how it fares'],
+            [
+              `${BIN_NAME} demo --interrupt-after 40`,
+              `crash mid-run, then ${BIN_NAME} resume --demo`,
+            ],
+            [`${BIN_NAME} doctor --live`, 'ready for a real migration? checks your setup'],
+          ]),
         ],
         style,
-        Math.min(ctx.width, 96),
+        boxWidth,
         style.yellow,
       ),
     );
@@ -345,6 +355,26 @@ function sampleTask(
     ...excerpt,
     `    ${style.gray(`… ${Math.max(0, lines.length - 16)} more line(s)`)}`,
   ];
+}
+
+/**
+ * Commands and what they do. With room, the descriptions line up in one column; on a narrow terminal
+ * each description moves under its command rather than being cut off.
+ */
+function nextSteps(
+  style: Style,
+  innerWidth: number,
+  rows: ReadonlyArray<readonly [string, string]>,
+): string[] {
+  const commandWidth = Math.max(...rows.map(([command]) => command.length));
+  const descriptionWidth = Math.max(...rows.map(([, what]) => what.length));
+  if (commandWidth + 2 + descriptionWidth <= innerWidth) {
+    return rows.map(
+      ([command, what]) =>
+        `${style.cyan(command)}${' '.repeat(commandWidth - command.length)}  ${what}`,
+    );
+  }
+  return rows.flatMap(([command, what]) => [style.cyan(command), style.gray(`  ${what}`)]);
 }
 
 export type { MigrationPlan };

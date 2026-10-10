@@ -1,5 +1,5 @@
 import type { DashboardState } from '@exitos/core/schema';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 export interface NavItem {
   id: string;
@@ -24,16 +24,20 @@ export function ModeBadge({ mode }: { mode: BadgeMode }) {
   if (mode === 'demo') {
     return (
       <div className="mode-badge mode-demo" data-testid="mode-badge" data-mode="demo">
-        <span className="text-base font-extrabold tracking-wider">OFFLINE DEMO</span>
-        <span className="text-xs font-medium">Synthetic data · fake APIs · no network</span>
+        <span className="text-sm font-extrabold tracking-wider sm:text-base">OFFLINE DEMO</span>
+        <span className="text-[0.6875rem] font-medium sm:text-xs">
+          Synthetic data · fake APIs · no network
+        </span>
       </div>
     );
   }
   if (mode === 'live') {
     return (
       <div className="mode-badge mode-live" data-testid="mode-badge" data-mode="live">
-        <span className="text-base font-extrabold tracking-wider">LIVE</span>
-        <span className="text-xs font-medium">Real workspace data · read-only dashboard</span>
+        <span className="text-sm font-extrabold tracking-wider sm:text-base">LIVE</span>
+        <span className="text-[0.6875rem] font-medium sm:text-xs">
+          Real workspace data · read-only dashboard
+        </span>
       </div>
     );
   }
@@ -44,8 +48,8 @@ export function ModeBadge({ mode }: { mode: BadgeMode }) {
   }[mode];
   return (
     <div className="mode-badge mode-idle" data-testid="mode-badge" data-mode={mode}>
-      <span className="text-base font-extrabold tracking-wider">{idle[0]}</span>
-      <span className="text-xs font-medium">{idle[1]}</span>
+      <span className="text-sm font-extrabold tracking-wider sm:text-base">{idle[0]}</span>
+      <span className="text-[0.6875rem] font-medium sm:text-xs">{idle[1]}</span>
     </div>
   );
 }
@@ -78,7 +82,18 @@ function useActiveSection(ids: readonly string[], enabled: boolean): string | nu
   return active;
 }
 
-export function Header({ mode, showNav }: { mode: BadgeMode; showNav: boolean }) {
+export function Header({
+  mode,
+  showNav,
+  badge,
+  subtitle = 'local dashboard',
+}: {
+  mode: BadgeMode;
+  showNav: boolean;
+  /** Replaces the mode badge (the online demo shows its own). */
+  badge?: ReactNode;
+  subtitle?: string;
+}) {
   const ref = useRef<HTMLElement>(null);
   const active = useActiveSection(SECTION_IDS, showNav);
 
@@ -100,10 +115,10 @@ export function Header({ mode, showNav }: { mode: BadgeMode; showNav: boolean })
 
   return (
     <header ref={ref} className="app-header">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6 lg:flex-nowrap">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-1.5 sm:px-6 sm:py-2 lg:flex-nowrap">
         <div className="flex min-w-0 items-baseline gap-2">
           <h1 className="text-lg font-bold tracking-tight">ExitOS</h1>
-          <span className="hidden text-sm text-muted sm:inline">local dashboard</span>
+          <span className="hidden text-sm text-muted sm:inline">{subtitle}</span>
         </div>
         {showNav ? (
           <nav
@@ -127,9 +142,7 @@ export function Header({ mode, showNav }: { mode: BadgeMode; showNav: boolean })
         ) : (
           <div className="flex-1" />
         )}
-        <div className="ml-auto lg:ml-0">
-          <ModeBadge mode={mode} />
-        </div>
+        <div className="ml-auto lg:ml-0">{badge ?? <ModeBadge mode={mode} />}</div>
       </div>
     </header>
   );

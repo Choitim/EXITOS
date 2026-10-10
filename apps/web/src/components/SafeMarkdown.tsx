@@ -3,7 +3,8 @@
  * anywhere: every piece of text goes through React's escaping, links pass the URL allow-list, and
  * images are never loaded (they are shown as links).
  */
-import { Fragment, memo, useMemo, type ReactNode } from 'react';
+import { Fragment, memo, useContext, useMemo, type ReactNode } from 'react';
+import { InertLinksContext } from '../hooks/InertLinks';
 import {
   parseMarkdown,
   type BlockNode,
@@ -21,6 +22,29 @@ const ALIGN_CLASS: Record<'left' | 'center' | 'right', string> = {
 
 function alignClass(align: TableAlign | undefined): string | undefined {
   return align ? ALIGN_CLASS[align] : undefined;
+}
+
+/**
+ * A link that passed the allow-list. In the online demo (`InertLinksContext`) the plan's content is
+ * synthetic and its links point at pages that do not exist, so they are shown as text instead.
+ */
+function SafeLink({ href, children }: { href: string; children: ReactNode }) {
+  const inert = useContext(InertLinksContext);
+  if (inert) {
+    return (
+      <span
+        className="md-blocked-link"
+        title="Links inside the synthetic demo content are switched off: they point at pages that do not exist."
+      >
+        {children}
+      </span>
+    );
+  }
+  return (
+    <a href={href} {...EXTERNAL_LINK_PROPS}>
+      {children}
+    </a>
+  );
 }
 
 function renderInline(nodes: readonly InlineNode[]): ReactNode {
@@ -54,11 +78,7 @@ function renderInlineNode(node: InlineNode): ReactNode {
           </span>
         );
       }
-      return (
-        <a href={href} {...EXTERNAL_LINK_PROPS}>
-          {renderInline(node.children)}
-        </a>
-      );
+      return <SafeLink href={href}>{renderInline(node.children)}</SafeLink>;
     }
     case 'image': {
       const href = sanitizeUrl(node.href);
@@ -70,11 +90,7 @@ function renderInlineNode(node: InlineNode): ReactNode {
           </span>
         );
       }
-      return (
-        <a href={href} {...EXTERNAL_LINK_PROPS}>
-          [Image: {label}]
-        </a>
-      );
+      return <SafeLink href={href}>[Image: {label}]</SafeLink>;
     }
   }
 }

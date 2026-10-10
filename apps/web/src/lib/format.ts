@@ -270,7 +270,7 @@ export function describeVerification(result: Pick<VerificationResult, 'status' |
       return {
         label: 'FAILED',
         tone: 'bad',
-        summary: `${pluralize(counts.mismatched, 'item')} differ and ${pluralize(counts.missing, 'item')} ${counts.missing === 1 ? 'is' : 'are'} missing in the destination.`,
+        summary: `${pluralize(counts.mismatched, 'item')} ${counts.mismatched === 1 ? 'differs' : 'differ'} and ${pluralize(counts.missing, 'item')} ${counts.missing === 1 ? 'is' : 'are'} missing in the destination.`,
       };
     case 'incomplete':
       return {

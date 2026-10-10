@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
+  GROUP_CAP,
+  PAGE_SIZE,
+  capGroup,
+  chipOutcomes,
   collectionNames,
   defaultTaskId,
+  describeRowCount,
+  describeTaskSummary,
   filterFindings,
   filterMappings,
   findingKey,
   groupFindingsByOutcome,
+  isGroupOpenByDefault,
+  mappingOutcomeCounts,
   matchesTerms,
   mergeFindings,
   nonVerifiedItems,
@@ -13,6 +21,7 @@ import {
   queryTerms,
   targetLabel,
   taskActions,
+  taskOutcomeSummary,
   taskPreview,
   transformLabel,
 } from '../src/lib/derive';
@@ -269,5 +278,223 @@ describe('verification rows', () => {
       items: makeVerification().items.filter((i) => i.status === 'verified'),
     });
     expect(nonVerifiedItems(all, plan)).toEqual([]);
+  });
+});
+
+describe('outcome filters and chip counts for the mapping table', () => {
+  const ids = (outcome: 'all' | 'supported' | 'transformed' | 'lossy' | 'unsupported') =>
+    filterMappings(plan, { collection: 'all', query: '', outcome }).map((m) => m.id);
+
+  it('filters by outcome, and "all" (or no outcome) keeps everything', () => {
+    expect(ids('all')).toEqual(['map_1', 'map_2', 'map_3']);
+    expect(filterMappings(plan, { collection: 'all', query: '' })).toHaveLength(3);
+    expect(ids('lossy')).toEqual(['map_1']);
+    expect(ids('supported')).toEqual(['map_2']);
+    expect(ids('transformed')).toEqual(['map_3']);
+    expect(ids('unsupported')).toEqual([]);
+  });
+
+  it('combines the outcome with the collection filter and the search', () => {
+    expect(
+      filterMappings(plan, {
+        collection: 'notion:data_source:aaaaaaaa',
+        query: '',
+        outcome: 'transformed',
+      }),
+    ).toEqual([]);
+    expect(
+      filterMappings(plan, { collection: 'all', query: 'status', outcome: 'lossy' }).map(
+        (m) => m.id,
+      ),
+    ).toEqual(['map_1']);
+  });
+
+  it('finds an outcome by the words people see as well as by the data value', () => {
+    const find = (query: string) =>
+      filterMappings(plan, { collection: 'all', query }).map((m) => m.id);
+    expect(find('requires review')).toEqual(['map_1']);
+    expect(find('loses detail')).toEqual(['map_1']);
+    expect(find('preserved')).toEqual(['map_2']);
+    expect(find('changes shape')).toEqual(['map_3']);
+    expect(find('lossy')).toEqual(['map_1']);
+  });
+
+  it('counts per outcome given the collection and search, ignoring the outcome filter', () => {
+    expect(mappingOutcomeCounts(plan, { collection: 'all', query: '' })).toEqual({
+      all: 3,
+      supported: 1,
+      transformed: 1,
+      lossy: 1,
+      unsupported: 0,
+      skipped: 0,
+      failed: 0,
+    });
+    expect(
+      mappingOutcomeCounts(plan, { collection: 'notion:data_source:aaaaaaaa', query: '' }),
+    ).toMatchObject({ all: 2, supported: 1, lossy: 1, transformed: 0 });
+    expect(mappingOutcomeCounts(plan, { collection: 'all', query: 'zzz' }).all).toBe(0);
+  });
+
+  it('shows the four headline chips always and the others only when they occur or are selected', () => {
+    const counts = mappingOutcomeCounts(plan, { collection: 'all', query: '' });
+    expect(chipOutcomes(counts, 'all')).toEqual([
+      'supported',
+      'transformed',
+      'lossy',
+      'unsupported',
+    ]);
+    expect(chipOutcomes({ ...counts, skipped: 2 }, 'all')).toContain('skipped');
+    expect(chipOutcomes(counts, 'failed')).toContain('failed');
+  });
+});
+
+describe('paging', () => {
+  it('uses pages of 25', () => {
+    expect(PAGE_SIZE).toBe(25);
+  });
+
+  it('keeps "Showing X of Y" honest', () => {
+    expect(describeRowCount({ shown: 25, matching: 25, total: 25 })).toBe(
+      'Showing 25 of 25 mappings',
+    );
+    expect(describeRowCount({ shown: 1, matching: 1, total: 1 })).toBe('Showing 1 of 1 mapping');
+    // paged but not filtered: the first 25 of all 80
+    expect(describeRowCount({ shown: 25, matching: 80, total: 80 })).toBe(
+      'Showing 25 of 80 mappings',
+    );
+    expect(describeRowCount({ shown: 12, matching: 12, total: 80 })).toBe(
+      'Showing 12 of 80 mappings (filtered)',
+    );
+    expect(describeRowCount({ shown: 25, matching: 40, total: 80 })).toBe(
+      'Showing 25 of 80 mappings (40 match the filters)',
+    );
+    expect(describeRowCount({ shown: 0, matching: 0, total: 80 })).toBe(
+      'Showing 0 of 80 mappings (filtered)',
+    );
+  });
+
+  it('caps a group and reports what is hidden', () => {
+    const items = Array.from({ length: 20 }, (_, i) => i);
+    expect(capGroup(items, GROUP_CAP)).toEqual({ visible: items.slice(0, 8), hidden: 12 });
+    expect(capGroup(items, 20)).toEqual({ visible: items, hidden: 0 });
+    expect(capGroup(items, 99)).toEqual({ visible: items, hidden: 0 });
+    expect(capGroup([], 8)).toEqual({ visible: [], hidden: 0 });
+  });
+});
+
+describe('what happens to one task', () => {
+  it('opens the groups that need a person and collapses the rest', () => {
+    expect(isGroupOpenByDefault('unsupported')).toBe(true);
+    expect(isGroupOpenByDefault('lossy')).toBe(true);
+    expect(isGroupOpenByDefault('failed')).toBe(true);
+    expect(isGroupOpenByDefault('transformed')).toBe(false);
+    expect(isGroupOpenByDefault('supported')).toBe(false);
+    expect(isGroupOpenByDefault('skipped')).toBe(false);
+  });
+
+  it('counts parts that move as-is from the collection mappings and the rest from the findings', () => {
+    const rich = taskActions(plan)[1]!;
+    expect(taskOutcomeSummary(rich, plan)).toEqual({
+      collections: ['Product Roadmap'],
+      preserved: 1,
+      transformed: 1,
+      lossy: 0,
+      unsupported: 0,
+    });
+    expect(describeTaskSummary(taskOutcomeSummary(rich, plan))).toBe(
+      '1 part moves as-is, 1 changes shape',
+    );
+  });
+
+  it('sums finding occurrences by outcome (count, or 1 when absent)', () => {
+    const task = {
+      ...taskActions(plan)[0]!,
+      findings: [
+        finding({ outcome: 'unsupported', collection: 'notion:data_source:bbbbbbbb' }),
+        finding({ outcome: 'unsupported' }),
+        finding({ outcome: 'lossy', count: 4 }),
+        finding({ outcome: 'transformed', count: 3 }),
+        finding({ outcome: 'transformed' }),
+      ],
+    };
+    const summary = taskOutcomeSummary(task, plan);
+    expect(summary).toMatchObject({ transformed: 4, lossy: 4, unsupported: 2 });
+    // the finding names the Bug Tracker; the task's list is the Roadmap list: both collections count
+    expect(summary.collections.sort()).toEqual(['Bug Tracker', 'Product Roadmap']);
+    expect(describeTaskSummary(summary)).toBe(
+      '1 part moves as-is, 4 change shape, 4 lose detail, 2 cannot move',
+    );
+  });
+
+  it('words the one-line summary like "12 parts move as-is, 3 change shape, ..."', () => {
+    expect(
+      describeTaskSummary({
+        collections: [],
+        preserved: 12,
+        transformed: 3,
+        lossy: 5,
+        unsupported: 2,
+      }),
+    ).toBe('12 parts move as-is, 3 change shape, 5 lose detail, 2 cannot move');
+    expect(
+      describeTaskSummary({
+        collections: [],
+        preserved: 1,
+        transformed: 1,
+        lossy: 1,
+        unsupported: 1,
+      }),
+    ).toBe('1 part moves as-is, 1 changes shape, 1 loses detail, 1 cannot move');
+  });
+
+  it('puts the noun on the first part that is present and drops zero counts', () => {
+    expect(
+      describeTaskSummary({
+        collections: [],
+        preserved: 0,
+        transformed: 0,
+        lossy: 7,
+        unsupported: 2,
+      }),
+    ).toBe('7 parts lose detail, 2 cannot move');
+    expect(
+      describeTaskSummary({
+        collections: [],
+        preserved: null,
+        transformed: 3,
+        lossy: 0,
+        unsupported: 0,
+      }),
+    ).toBe('3 parts change shape');
+  });
+
+  it('is empty when nothing at all is recorded, and copes with a task of unknown collection', () => {
+    const bare = {
+      findings: [],
+      payload: { body: { name: 'x' } },
+    };
+    const summary = taskOutcomeSummary(bare, plan);
+    expect(summary).toEqual({
+      collections: [],
+      preserved: null,
+      transformed: 0,
+      lossy: 0,
+      unsupported: 0,
+    });
+    expect(describeTaskSummary(summary)).toBe('');
+  });
+
+  it("groups a task's findings by outcome, unsupported first, with counts per group", () => {
+    const groups = groupFindingsByOutcome([
+      finding({ outcome: 'transformed' }),
+      finding({ outcome: 'lossy' }),
+      finding({ outcome: 'unsupported' }),
+      finding({ outcome: 'lossy', code: 'OTHER' }),
+    ]);
+    expect(groups.map((g) => [g.outcome, g.findings.length])).toEqual([
+      ['unsupported', 1],
+      ['lossy', 2],
+      ['transformed', 1],
+    ]);
   });
 });

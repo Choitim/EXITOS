@@ -106,59 +106,64 @@ export function SourceDestination({ plan }: { state: DashboardState; plan: Migra
         </Card>
       </div>
 
-      <TableWrap label="Collections and their destination targets">
-        <table className="data-table">
-          <caption>Collections to migrate</caption>
-          <thead>
-            <tr>
-              <th scope="col">Source collection</th>
-              <th scope="col">Destination target</th>
-              <th scope="col" className="num">
-                Rows
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {collections.map((collection) => (
-              <tr key={collection.key}>
-                <th scope="row">
-                  {collection.name}
-                  {collection.incomplete ? (
-                    <span className="mt-1 block">
-                      <Chip
-                        tone="warn"
-                        icon="warning"
-                        title="The source could not be read completely (for example a documented API cap)."
-                      >
-                        may be incomplete
-                      </Chip>
-                    </span>
-                  ) : null}
+      {collections.length === 0 ? (
+        <Empty title="The plan has no collections" testId="collections-empty">
+          Nothing in the source was selected for migration, so there are no rows to move.
+        </Empty>
+      ) : (
+        <TableWrap label="Collections and their destination targets">
+          <table className="data-table">
+            <caption>Collections to migrate</caption>
+            <thead>
+              <tr>
+                <th scope="col">Source collection</th>
+                <th scope="col">Destination target</th>
+                <th scope="col" className="num">
+                  Rows
                 </th>
-                <td>
-                  {collection.target ? (
-                    <TargetLine target={collection.target} />
-                  ) : (
-                    <span className="text-muted">No target (not written)</span>
-                  )}
-                </td>
-                <td className="num" data-testid={`rows-${collection.name}`}>
-                  {formatNumber(collection.recordCount)}
-                </td>
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th scope="row" colSpan={2}>
-                Total rows
-              </th>
-              <td className="num">{formatNumber(totalRows)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </TableWrap>
-      {collections.length === 0 ? <Empty>The plan has no collections.</Empty> : null}
+            </thead>
+            <tbody>
+              {collections.map((collection) => (
+                <tr key={collection.key}>
+                  <th scope="row">
+                    {collection.name}
+                    {collection.incomplete ? (
+                      <span className="mt-1 block">
+                        <Chip
+                          tone="warn"
+                          icon="warning"
+                          title="The source could not be read completely (for example a documented API cap)."
+                        >
+                          may be incomplete
+                        </Chip>
+                      </span>
+                    ) : null}
+                  </th>
+                  <td>
+                    {collection.target ? (
+                      <TargetLine target={collection.target} />
+                    ) : (
+                      <span className="text-muted">No target (not written)</span>
+                    )}
+                  </td>
+                  <td className="num" data-testid={`rows-${collection.name}`}>
+                    {formatNumber(collection.recordCount)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row" colSpan={2}>
+                  Total rows
+                </th>
+                <td className="num">{formatNumber(totalRows)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </TableWrap>
+      )}
 
       <Card title="People mapping">
         <dl className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">

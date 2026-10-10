@@ -33,6 +33,8 @@ export function makeCli(
     overrides?: CliContext['overrides'];
     cwd?: string;
     color?: boolean;
+    platform?: NodeJS.Platform;
+    columns?: number;
   } = {},
 ): TestCli {
   const cwd = options.cwd ?? mkdtempSync(join(tmpdir(), 'exitos-cli-'));
@@ -44,7 +46,7 @@ export function makeCli(
     stderr: (t) => void err.push(t),
     stdoutIsTTY: options.tty === true,
     stdinIsTTY: options.tty === true,
-    columns: 110,
+    columns: options.columns ?? 110,
     prompt: async () => answers.shift() ?? '',
   };
   const ctx = createContext({
@@ -52,6 +54,7 @@ export function makeCli(
     env: { ...options.env },
     io,
     noColor: options.color !== true,
+    ...(options.platform === undefined ? {} : { platform: options.platform }),
     ...(options.overrides === undefined ? {} : { overrides: options.overrides }),
   });
   return {

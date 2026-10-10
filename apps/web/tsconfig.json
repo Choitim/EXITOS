@@ -7,6 +7,7 @@
     "declarationMap": false,
     "sourceMap": false,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "target": "ES2023",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
@@ -16,6 +17,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src", "test", "vite.config.ts"],
+  "include": ["src", "test", "vite.config.ts", "static-demo-csp.ts"],
   "references": [{ "path": "../../packages/core" }]
 }

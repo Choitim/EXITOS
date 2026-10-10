@@ -29,3 +29,26 @@ export function downloadJson(filename: string, value: unknown): void {
     URL.revokeObjectURL(url);
   }, 10_000);
 }
+
+/** True when the visitor asked the system for less motion. */
+export function prefersReducedMotion(): boolean {
+  return typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
+}
+
+/**
+ * Scroll so that the element `id` sits just below the sticky header (and, for page sections, the
+ * guided tour's control bar). Does nothing if the element does not exist.
+ */
+export function scrollToElement(id: string, options: { belowTourBar: boolean }): void {
+  const element = document.getElementById(id);
+  if (element === null) return;
+  const style = getComputedStyle(document.documentElement);
+  const px = (name: string): number => Number.parseFloat(style.getPropertyValue(name)) || 0;
+  const offset = px('--header-h') + (options.belowTourBar ? px('--tour-h') : 0) + 12;
+  window.scrollTo({
+    top: Math.max(0, element.getBoundingClientRect().top + window.scrollY - offset),
+    behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+  });
+}

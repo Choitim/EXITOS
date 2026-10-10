@@ -5,7 +5,14 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const TARGETS = new Set(['dist', 'dist-test', 'coverage', 'playwright-report', 'test-results']);
+const TARGETS = new Set([
+  'dist',
+  'dist-demo',
+  'dist-test',
+  'coverage',
+  'playwright-report',
+  'test-results',
+]);
 const SKIP = new Set(['node_modules', '.git']);
 
 function walk(dir) {

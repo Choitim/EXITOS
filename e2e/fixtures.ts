@@ -16,6 +16,18 @@ export const urls = {
   get empty(): string {
     return requiredEnv(ENV.empty);
   },
+  /** A plan that exists but was never approved: no run. */
+  get planned(): string {
+    return requiredEnv(ENV.planned);
+  },
+  /** A run that applied every action but was never verified. */
+  get applied(): string {
+    return requiredEnv(ENV.applied);
+  },
+  /** A run that stopped with failed, blocked and ambiguous actions. */
+  get failed(): string {
+    return requiredEnv(ENV.failed);
+  },
 };
 
 export interface Monitor {
@@ -80,45 +92,78 @@ export const test = base.extend<{ monitor: Monitor }>({
   },
 });
 
+export interface ApiFinding {
+  code: string;
+  outcome: string;
+  severity: string;
+  message: string;
+  count?: number;
+  field?: string;
+  collection?: string;
+}
+
+type OutcomeTally = Record<
+  'supported' | 'transformed' | 'lossy' | 'unsupported' | 'skipped' | 'failed',
+  number
+>;
+
 /** Subset of `GET /api/state` the tests compare against (the page must agree with the API). */
 export interface ApiState {
   mode: string;
   plan: {
     planId: string;
-    mappings: Array<{ collection: string; source: { name: string }; outcome: string }>;
-    collections: Array<{ key: string; name: string; recordCount: number }>;
-    inventory: Array<{
-      code: string;
-      outcome: string;
-      count?: number;
-      message: string;
-      field?: string;
+    mappings: Array<{ id: string; collection: string; source: { name: string }; outcome: string }>;
+    collections: Array<{
+      key: string;
+      name: string;
+      recordCount: number;
+      target: { id: string; name: string } | null;
     }>;
+    inventory: ApiFinding[];
+    findings: ApiFinding[];
     knownLimits: string[];
-    actions: Array<{ id: string; kind: string; payload: Record<string, unknown> }>;
+    actions: Array<{
+      id: string;
+      kind: string;
+      scope: string;
+      disposition: string;
+      outcome: string;
+      findings: ApiFinding[];
+      payload: Record<string, unknown>;
+    }>;
+    destination: {
+      workspace: { name: string };
+      targets: Array<{ kind: string; id: string; name: string }>;
+    };
     summary: {
-      actions: { total: number; toExecute: number; toSkip: number };
-      items: Record<
-        'supported' | 'transformed' | 'lossy' | 'unsupported' | 'skipped' | 'failed',
-        number
-      >;
-      fields: Record<
-        'supported' | 'transformed' | 'lossy' | 'unsupported' | 'skipped' | 'failed',
-        number
-      >;
+      actions: {
+        total: number;
+        toExecute: number;
+        toSkip: number;
+        byKind: Record<string, number>;
+      };
+      items: OutcomeTally;
+      fields: OutcomeTally;
       notPreserved: { unsupported: number; lossy: number };
+      blockingErrors: number;
+      warnings: number;
     };
     users: { mapped: unknown[]; unmapped: unknown[]; assignmentsThatNotify: number };
   };
-  run: { runId: string; status: string; counts: Record<string, number> } | null;
+  run: {
+    runId: string;
+    status: string;
+    counts: Record<string, number>;
+    stopReason?: string;
+  } | null;
   verification: {
     status: string;
     counts: { verified: number; mismatched: number; missing: number; unverified: number };
     targets: Array<{ target: string; expected: number; found: number }>;
     scope: string;
   } | null;
-  report: { state: string; headline: string } | null;
-  events: Array<{ id: number; message: string }>;
+  report: { state: string; headline: string; notPreserved: ApiFinding[] } | null;
+  events: Array<{ id: number; message: string; type: string; level: string }>;
 }
 
 export async function fetchState(baseUrl: string): Promise<ApiState> {
@@ -129,3 +174,22 @@ export async function fetchState(baseUrl: string): Promise<ApiState> {
 
 /** Thousands separators exactly as the dashboard prints them. */
 export const fmt = (n: number): string => n.toLocaleString('en-US');
+
+/**
+ * Serve a changed copy of the real `/api/state` to the page: fetch the live document, let `mutate`
+ * edit a deep copy in place, and answer every page request with the result. The edits only reshape
+ * what the real server returned (drop the run, repeat a mapping, ...); nothing here is shown by
+ * the dashboard unless the state says so.
+ */
+export async function mockState(
+  page: Page,
+  baseUrl: string,
+  mutate: (state: ApiState) => void,
+): Promise<ApiState> {
+  const state = structuredClone(await fetchState(baseUrl));
+  mutate(state);
+  await page.route('**/api/state', (route) =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify(state) }),
+  );
+  return state;
+}

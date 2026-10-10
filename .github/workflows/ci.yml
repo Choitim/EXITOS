@@ -99,6 +99,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # The static online demo, so its browser tests (e2e/static-demo.spec.ts) run in CI too.
+      - run: pnpm build:demo
+      # Skipped in the main job because the recorded data does not exist before `build:demo`; run it here.
+      - name: Replay unit test against the freshly recorded demo data
+        run: pnpm exec vitest run apps/web/test/replay.test.ts
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@v4
