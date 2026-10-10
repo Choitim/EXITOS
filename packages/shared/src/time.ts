@@ -82,6 +82,14 @@ export function zoneOffsetMs(epochMs: number, timeZone: string): number {
  * Convert a wall-clock time in `timeZone` to an instant.
  * DST gap (non-existent local time): resolved forward, like most calendar software.
  * DST overlap (ambiguous local time): resolved to the earlier of the two instants.
+ *
+ * A zone's offset changes at most once near any given moment, so the offsets one day before and one
+ * day after the wall-clock time bracket every possibility. Each offset yields one candidate instant,
+ * and a candidate is real only if the zone really has that offset there:
+ *  - both real  -> the clocks went back and this time happened twice: take the earlier one;
+ *  - one real   -> the ordinary case;
+ *  - neither    -> the clocks went forward over this time: use the offset from before the change,
+ *                  which lands just after the gap (02:30 in a 02:00 -> 03:00 jump becomes 03:30).
  */
 export function zonedLocalToEpochMs(local: LocalDateTime, timeZone: string): number {
   const naive = Date.UTC(
@@ -93,13 +101,18 @@ export function zonedLocalToEpochMs(local: LocalDateTime, timeZone: string): num
     local.second,
     local.millisecond,
   );
-  const offset1 = zoneOffsetMs(naive, timeZone);
-  const guess = naive - offset1;
-  const offset2 = zoneOffsetMs(guess, timeZone);
-  if (offset1 === offset2) return guess;
-  const second = naive - offset2;
-  const offset3 = zoneOffsetMs(second, timeZone);
-  return offset2 === offset3 ? second : guess;
+  const DAY_MS = 86_400_000;
+  const before = zoneOffsetMs(naive - DAY_MS, timeZone);
+  const after = zoneOffsetMs(naive + DAY_MS, timeZone);
+  if (before === after) return naive - before;
+
+  const early = naive - before;
+  const late = naive - after;
+  const earlyIsReal = zoneOffsetMs(early, timeZone) === before;
+  const lateIsReal = zoneOffsetMs(late, timeZone) === after;
+  if (earlyIsReal && lateIsReal) return Math.min(early, late);
+  if (lateIsReal) return late;
+  return early;
 }
 
 const DATE_RE =

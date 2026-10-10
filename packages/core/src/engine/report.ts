@@ -57,7 +57,7 @@ function headline(
   const notPreserved = plan.summary.notPreserved.unsupported + plan.summary.notPreserved.lossy;
   switch (state) {
     case 'planned_only':
-      return `PLAN ONLY — nothing has been written. ${total} action(s) would run${skipped > 0 ? `, ${skipped} skipped (already present)` : ''}; ${notPreserved} finding(s) are lossy or unsupported.`;
+      return `PLAN ONLY — nothing has been written. ${total} action(s) would run${skipped > 0 ? `, ${skipped} skipped (already present)` : ''}; ${notPreserved} finding(s) require review or are unsupported.`;
     case 'in_progress':
       return `IN PROGRESS — ${run?.counts.succeeded ?? 0} of ${total} action(s) done. Not verified.`;
     case 'partial':
@@ -69,7 +69,7 @@ function headline(
     case 'verification_failed':
       return `VERIFICATION FAILED — ${verification?.counts.mismatched ?? 0} mismatched, ${verification?.counts.missing ?? 0} missing. This migration is NOT complete.`;
     case 'verified':
-      return `VERIFIED — ${verification?.counts.verified ?? 0} planned item(s) match the plan within the declared scope. ${notPreserved} finding(s) were lossy or unsupported and are listed below.`;
+      return `VERIFIED — ${verification?.counts.verified ?? 0} planned item(s) match the plan within the declared scope. ${notPreserved} finding(s) require review or are unsupported and are listed below.`;
   }
 }
 
@@ -233,10 +233,12 @@ export function redactReport(report: MigrationReport): MigrationReport {
 // Renderers
 // ---------------------------------------------------------------------------------------------
 
+// The words people read, the same in the terminal, the dashboard and the docs. Data values keep their
+// names (supported / lossy ...); only what is printed changes.
 const OUTCOME_LABEL: Record<string, string> = {
-  supported: 'Supported',
+  supported: 'Preserved',
   transformed: 'Transformed',
-  lossy: 'Lossy',
+  lossy: 'Requires review',
   unsupported: 'Unsupported',
   skipped: 'Skipped',
   failed: 'Failed',
@@ -282,7 +284,7 @@ export function renderReportMarkdown(report: MigrationReport): string {
   );
   out.push('## Not preserved', '');
   if (lossy.length === 0) {
-    out.push('Nothing in the declared scope was found to be lossy or unsupported.', '');
+    out.push('Nothing in the declared scope was found to require review or to be unsupported.', '');
   } else {
     out.push('| Outcome | Code | Count | What happens |', '|---|---|---:|---|');
     for (const f of lossy) {

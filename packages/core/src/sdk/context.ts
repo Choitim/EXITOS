@@ -64,8 +64,9 @@ export function resolveCredentials(
     }
     if (value === undefined || value === '') {
       if (spec.required) {
+        const how = spec.helpUrl === undefined ? '' : ` How to create one: ${spec.helpUrl}.`;
         throw new ConfigError(
-          `Missing ${spec.env} (${spec.description}). Set it in your environment or in a local .env file — see .env.example. ExitOS never reads credentials from the migration config.`,
+          `Missing ${spec.env} (${spec.description}). Set it in your environment or in a local .env file (see .env.example).${how} ExitOS never reads credentials from the migration config. \`exitos doctor --live\` checks your setup.`,
         );
       }
       continue;

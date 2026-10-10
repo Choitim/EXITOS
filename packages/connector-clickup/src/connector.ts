@@ -147,6 +147,7 @@ export const clickupDestination: DestinationConnectorDefinition<ClickUpDestinati
       description: 'ClickUp personal API token (Settings → Apps)',
       required: true,
       prefixHint: 'pk_',
+      helpUrl: 'https://developer.clickup.com/docs/authentication',
     },
   ],
   configSchema: ClickUpDestinationConfigSchema,

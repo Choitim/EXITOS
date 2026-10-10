@@ -262,6 +262,7 @@ export const notionSource: SourceConnectorDefinition<NotionSourceConfig, NotionR
       description: 'Notion internal connection secret',
       required: true,
       prefixHint: 'ntn_',
+      helpUrl: 'https://developers.notion.com/guides/get-started/internal-connections',
     },
   ],
   configSchema: NotionSourceConfigSchema,

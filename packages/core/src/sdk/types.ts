@@ -44,6 +44,8 @@ export interface CredentialSpec {
   required: boolean;
   /** Expected prefix, used only to give a friendly hint if the value looks wrong. */
   prefixHint?: string;
+  /** Official page that explains how to create this credential; shown when it is missing. */
+  helpUrl?: string;
 }
 
 /**

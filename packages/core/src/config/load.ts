@@ -1,6 +1,7 @@
 import { ConfigError } from '@exitos/shared';
 import { parse as parseYaml, YAMLParseError } from 'yaml';
 import { MigrationConfigSchema, findSecretKeys, type MigrationConfig } from '../schema/index.js';
+import { formatConfigIssues } from './issues.js';
 
 /**
  * Parse and validate `migration.yaml` (or `.json`). Credentials are rejected outright: they must
@@ -31,10 +32,9 @@ export function parseMigrationConfig(text: string, filename = 'migration.yaml'):
 
   const parsed = MigrationConfigSchema.safeParse(raw);
   if (!parsed.success) {
-    const lines = parsed.error.issues
-      .slice(0, 8)
-      .map((i) => `  • ${i.path.join('.') || '(root)'}: ${i.message}`);
-    throw new ConfigError(`Invalid ${filename}:\n${lines.join('\n')}`);
+    throw new ConfigError(
+      `Invalid ${filename}:\n${formatConfigIssues(parsed.error.issues, { max: 10 }).join('\n')}`,
+    );
   }
   return parsed.data;
 }

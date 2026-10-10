@@ -2,6 +2,7 @@ export * from './schema/index.js';
 export * from './sdk/index.js';
 export * from './markdown/render.js';
 export * from './config/load.js';
+export * from './config/issues.js';
 export * from './engine/plan.js';
 export * from './engine/planner.js';
 export * from './engine/run.js';

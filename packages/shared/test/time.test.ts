@@ -136,3 +136,126 @@ describe('isValidTimeZone (cached)', () => {
     expect(isValidTimeZone('UTC')).toBe(true);
   });
 });
+
+describe('zonedLocalToEpochMs: DST gaps and overlaps resolve the same way in every zone', () => {
+  const at = (iso: string, zone: string): string => {
+    const [date = '', time = ''] = iso.split('T');
+    const [year = 0, month = 0, day = 0] = date.split('-').map(Number);
+    const [hour = 0, minute = 0] = time.split(':').map(Number);
+    const ms = zonedLocalToEpochMs(
+      { year, month, day, hour, minute, second: 0, millisecond: 0 },
+      zone,
+    );
+    return new Date(ms).toISOString().slice(0, 16);
+  };
+
+  // Policy: a time that does not exist moves FORWARD (02:30 in a 02:00→03:00 jump is 03:30);
+  // a time that happens twice is the EARLIER one. Zones east of UTC used to get this backwards.
+  it.each([
+    // zone, local time, expected UTC instant, what it is
+    ['Europe/Berlin', '2026-03-29T02:30', '2026-03-29T01:30', 'gap (03:30 CEST)'],
+    ['Europe/Berlin', '2026-10-25T02:30', '2026-10-25T00:30', 'overlap (the first, CEST)'],
+    ['Europe/London', '2026-03-29T01:30', '2026-03-29T01:30', 'gap (02:30 BST)'],
+    ['Europe/London', '2026-10-25T01:30', '2026-10-25T00:30', 'overlap (the first, BST)'],
+    ['Australia/Sydney', '2026-10-04T02:30', '2026-10-03T16:30', 'gap (03:30 AEDT)'],
+    ['Australia/Sydney', '2026-04-05T02:30', '2026-04-04T15:30', 'overlap (the first, AEDT)'],
+    ['Australia/Lord_Howe', '2026-04-05T01:45', '2026-04-04T14:45', 'overlap in a half-hour shift'],
+    ['Pacific/Auckland', '2026-09-27T02:30', '2026-09-26T14:30', 'gap (03:30 NZDT)'],
+    ['America/New_York', '2026-03-08T02:30', '2026-03-08T07:30', 'gap (03:30 EDT)'],
+    ['America/New_York', '2026-11-01T01:30', '2026-11-01T05:30', 'overlap (the first, EDT)'],
+    ['America/Los_Angeles', '2026-03-08T02:30', '2026-03-08T10:30', 'gap (03:30 PDT)'],
+  ] as const)('%s %s → %s UTC: %s', (zone, local, expected, _what) => {
+    expect(at(local, zone)).toBe(expected);
+  });
+
+  it('ordinary times, also on the day of a change, are unaffected', () => {
+    expect(at('2026-03-29T10:00', 'Europe/Berlin')).toBe('2026-03-29T08:00');
+    expect(at('2026-03-29T00:30', 'Europe/Berlin')).toBe('2026-03-28T23:30');
+    expect(at('2026-10-25T10:00', 'Europe/Berlin')).toBe('2026-10-25T09:00');
+    expect(at('2026-07-01T12:00', 'Asia/Kolkata')).toBe('2026-07-01T06:30');
+    expect(at('2026-07-01T12:00', 'UTC')).toBe('2026-07-01T12:00');
+  });
+
+  it('agrees with a brute-force search of every instant, around every 2026 change, in many zones', () => {
+    const formatters = new Map<string, Intl.DateTimeFormat>();
+    const wallClock = (t: number, zone: string): number => {
+      let f = formatters.get(zone);
+      if (f === undefined) {
+        f = new Intl.DateTimeFormat('en-US', {
+          timeZone: zone,
+          hourCycle: 'h23',
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: 'numeric',
+          second: 'numeric',
+        });
+        formatters.set(zone, f);
+      }
+      const p = Object.fromEntries(
+        f.formatToParts(new Date(t)).map((x) => [x.type, Number(x.value)]),
+      );
+      return Date.UTC(
+        p.year ?? 0,
+        (p.month ?? 1) - 1,
+        p.day ?? 1,
+        (p.hour ?? 0) % 24,
+        p.minute ?? 0,
+        p.second ?? 0,
+      );
+    };
+    const MIN = 60_000;
+    const oracle = (naive: number, zone: string): number => {
+      const hits: number[] = [];
+      for (let t = naive - 30 * 60 * MIN; t <= naive + 30 * 60 * MIN; t += 15 * MIN) {
+        if (wallClock(t, zone) === naive) hits.push(t);
+      }
+      if (hits.length > 0) return Math.min(...hits);
+      let change = naive - 30 * 60 * MIN;
+      while (
+        wallClock(change + 15 * MIN, zone) - (change + 15 * MIN) ===
+        wallClock(change, zone) - change
+      ) {
+        change += 15 * MIN;
+      }
+      return naive - (wallClock(change, zone) - change);
+    };
+
+    const zones = [
+      'America/New_York',
+      'America/Los_Angeles',
+      'Europe/Berlin',
+      'Europe/London',
+      'Australia/Sydney',
+      'Australia/Lord_Howe',
+      'Pacific/Auckland',
+    ];
+    let compared = 0;
+    for (const zone of zones) {
+      for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 60 * MIN) {
+        const jump = wallClock(t + 60 * MIN, zone) - (t + 60 * MIN) !== wallClock(t, zone) - t;
+        if (!jump) continue;
+        const base = wallClock(t, zone);
+        for (let delta = -90; delta <= 150; delta += 15) {
+          const naive = base + delta * MIN;
+          const d = new Date(naive);
+          const local = {
+            year: d.getUTCFullYear(),
+            month: d.getUTCMonth() + 1,
+            day: d.getUTCDate(),
+            hour: d.getUTCHours(),
+            minute: d.getUTCMinutes(),
+            second: 0,
+            millisecond: 0,
+          };
+          expect(zonedLocalToEpochMs(local, zone), `${zone} ${d.toISOString().slice(0, 16)}`).toBe(
+            oracle(naive, zone),
+          );
+          compared += 1;
+        }
+      }
+    }
+    expect(compared).toBeGreaterThan(150);
+  });
+});
