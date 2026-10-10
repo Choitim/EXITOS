@@ -40,10 +40,19 @@ as you. Use a token that belongs to a test Workspace.
 
 ```bash
 cp .env.example .env && chmod 600 .env     # .env is gitignored
+# PowerShell:  Copy-Item .env.example .env
 # edit .env: NOTION_TOKEN=…  CLICKUP_API_TOKEN=…
 ```
 
-Or `export` them in your shell (real environment variables always win over `.env`).
+Or set them in your shell (`export NOTION_TOKEN=…`, or `$env:NOTION_TOKEN = "…"` in PowerShell); real
+environment variables always win over `.env`.
+
+Then check the setup. This sends nothing anywhere, and tells you what is missing and how to fix it:
+
+```bash
+pnpm exitos doctor --live
+pnpm exitos doctor --online     # also proves both tokens work, with read-only calls
+```
 
 ## 4. Seed a small, representative Notion test set
 
@@ -72,8 +81,10 @@ pnpm exitos inspect notion                 # lists data sources/pages shared wit
 pnpm exitos inspect clickup                # lists Workspaces and Lists with their ids
 ```
 
-Copy `migration.example.yaml` to `migration.yaml` and fill in the ids. Start small: one data source,
-one list.
+Copy `migration.example.yaml` to `migration.yaml` (PowerShell: `Copy-Item migration.example.yaml
+migration.yaml`) and fill in the ids. Start small: one data source, one list. `pnpm exitos doctor --config
+migration.yaml` validates the file without contacting any API and lists every problem at once; `plan` uses
+`./migration.yaml` automatically when you do not pass `--config`.
 
 ## 7. Plan (read-only) and read it
 

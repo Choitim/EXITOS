@@ -73,7 +73,10 @@ pnpm exitos ui --demo     # the same run in the local, read-only dashboard
 **Interfaces and extensibility**
 
 - CLI: `demo`, `inspect`, `plan`, `apply`, `status`, `resume`, `verify`, `report`, `ui`, `connectors`.
-- Local dashboard (loopback only, strict CSP, no credentials in the browser).
+- `exitos doctor`: checks the setup (Node.js, tokens, proxy, config) without sending anything anywhere; `--online` proves the tokens with read-only calls.
+- Local dashboard (loopback only, strict CSP, no credentials in the browser) with a stage tracker, an approval summary and the same six states everywhere: Preserved, Transformed, Requires review, Unsupported, Failed, Verified.
+- A static, simulated **browser demo** (a guided tour and a replay of a recorded run, no backend). It is built in this repository (`pnpm build:demo`) and **not published**: see [online-demo.md](online-demo.md).
+- English and Korean README.
 - Connector SDK, conformance kit and a tested example connector ([guide](connector-sdk.md)).
 
 ## What is not in v0.1.0
@@ -89,17 +92,17 @@ other than Notion → ClickUp. Details: [finding codes](finding-codes.md) and th
 Recorded on 2026-10-08 from a local run on macOS (Apple silicon). The numbers are the output of the
 commands shown, not estimates.
 
-| Check                                                         | Command                          | Result                                                                                                   |
-| ------------------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Format, lint, strict typecheck, unit/integration tests, build | `pnpm check`                     | passed — **38 test files, 628 tests, 0 failures** (about 13 s; one opt-in scale test is skipped)         |
-| Same test suite on the minimum supported Node                 | Node 22.13.0                     | passed — 38 files, 628 tests, including the proxy tests; the offline demo also runs with an empty stderr |
-| Coverage, with an enforced floor                              | `pnpm test:coverage`             | 88.2 % statements, 76.1 % branches, 89.5 % functions, 89.7 % lines                                       |
-| Dashboard browser tests (Chromium)                            | `pnpm test:e2e`                  | passed — **28 tests** (about 8 s)                                                                        |
-| Secret scan                                                   | `node scripts/check-secrets.mjs` | no credential-shaped strings (tests, e2e files and the lockfile are excluded by design)                  |
-| Dependency audit                                              | `pnpm audit`                     | no known vulnerabilities                                                                                 |
-| Licence allow-list                                            | `pnpm check:licenses`            | 8 production dependencies, all MIT (7) or ISC (1)                                                        |
-| Node versions exercised, locally                              | local                            | 22.13.0 and 26.0.0                                                                                       |
-| GitHub Actions on the pre-release commit                      | CI workflow                      | passed — Ubuntu Node 22, Ubuntu Node 24, macOS Node 22 and the dashboard browser job (4 of 4 jobs)       |
+| Check                                                         | Command                          | Result                                                                                                       |
+| ------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Format, lint, strict typecheck, unit/integration tests, build | `pnpm check`                     | passed — **50 test files, 918 tests, 0 failures** (about 15 s; one opt-in scale test is skipped)             |
+| Same test suite on the minimum supported Node                 | Node 22.13.0                     | passed — 50 files, 918 tests; `--version`, `doctor` and the offline demo also run there with an empty stderr |
+| Coverage, with an enforced floor                              | `pnpm test:coverage`             | 89.7 % statements, 77.8 % branches, 91.7 % functions, 91.1 % lines                                           |
+| Dashboard browser tests (Chromium)                            | `pnpm test:e2e`                  | passed — **99 tests** (about 20 s), including the static online demo                                         |
+| Secret scan                                                   | `node scripts/check-secrets.mjs` | no credential-shaped strings (tests, e2e files and the lockfile are excluded by design)                      |
+| Dependency audit                                              | `pnpm audit`                     | no known vulnerabilities                                                                                     |
+| Licence allow-list                                            | `pnpm check:licenses`            | 8 production dependencies, all MIT (7) or ISC (1)                                                            |
+| Node versions exercised, locally                              | local                            | 22.13.0 and 26.0.0                                                                                           |
+| GitHub Actions on the pre-release commit                      | CI workflow                      | passed — Ubuntu Node 22, Ubuntu Node 24, macOS Node 22 and the dashboard browser job (4 of 4 jobs)           |
 
 The first GitHub Actions run failed in the lint step: `apps/web` and `e2e` did not declare a TypeScript
 project reference to `@exitos/core`, so on a clean checkout (no `dist/` yet) the linter could not

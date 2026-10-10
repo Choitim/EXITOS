@@ -112,16 +112,24 @@ inspect  ──►  plan  ──►  review  ──►  approve  ──►  appl
 ## 6. CLI
 
 ```
-exitos demo [--fast] [--interrupt-after <n>] [--state-dir <dir>] [--no-color] [--json]
-exitos inspect notion|clickup [--config <file>] [--json]
-exitos plan notion clickup --config <file> [--out <plan.json>] [--json]
+exitos doctor [--live] [--online] [--config <file>] [--state-dir <dir>] [--json]
+exitos demo [--pace <ms>] [--interrupt-after <n>] [--no-chaos] [--state-dir <dir>] [--json]
+exitos inspect notion|clickup [--config <file>] [--demo] [--state-dir <dir>] [--json]
+exitos plan notion clickup [--config <file>] [--out <plan.json>] [--summary] [--force] [--json]
 exitos apply --plan <plan.json> [--approve <planId>] [--concurrency <n>] [--state-dir <dir>]
-exitos status [--demo | --state-dir <dir>] [--json]
-exitos resume [--run <id>] [--assume-not-created <actionId>]
-exitos verify [--run <id>] [--json]
-exitos report [--run <id>] [--format terminal|markdown|json] [--out <file>] [--redact]
+exitos status [--run <id>] [--demo | --state-dir <dir>] [--json]
+exitos resume [--run <id>] [--demo] [--concurrency <n>] [--assume-not-created <actionId...>]
+exitos verify [--run <id>] [--demo] [--state-dir <dir>] [--json]
+exitos report [--run <id>] [--format terminal|markdown|json] [--out <file>] [--redact] [--demo] [--json]
 exitos ui [--port <n>] [--demo | --state-dir <dir>]
+exitos connectors [--json]
 ```
+
+`doctor` checks the environment without sending anything anywhere: Node.js and `node:sqlite`, the state
+directory, `.env` permissions, whether the tokens are set (never printing them), proxy and CA settings, and
+a migration config (offline). `--live` turns missing tokens or config into problems; `--online` also makes
+read-only calls to the two APIs. `plan` uses `./migration.yaml` when `--config` is omitted and it exists.
+Every command accepts `--no-color` and `--verbose` (secrets are always redacted).
 
 Exit codes: `0` success · `1` unexpected error · `2` usage/config error · `3` run stopped/partial ·
 `4` verification found mismatches/missing items · `5` approval missing/mismatched.

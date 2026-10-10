@@ -90,6 +90,7 @@ describe('documentation stays true', () => {
     const used = new Set<string>();
     for (const file of [
       'README.md',
+      'README.ko.md',
       'CONTRIBUTING.md',
       'docs/live-sandbox-testing.md',
       'docs/demo-recording.md',
@@ -105,6 +106,74 @@ describe('documentation stays true', () => {
     const unknown = [...used].filter((c) => !known.has(c));
     expect(unknown).toEqual([]);
     expect(used.size).toBeGreaterThan(3);
+  });
+
+  it('every `pnpm <script>` and `exitos <command>` in any Markdown file is real', () => {
+    type Pkg = { name?: string; scripts?: Record<string, string> };
+    const rootScripts = new Set(
+      Object.keys((JSON.parse(read('package.json')) as Pkg).scripts ?? {}),
+    );
+    // Scripts per workspace package, for `pnpm --filter <name> <script>`.
+    const byName = new Map<string, Set<string>>();
+    for (const parent of ['apps', 'packages', 'examples']) {
+      for (const dir of readdirSync(join(root, parent))) {
+        const file = join(root, parent, dir, 'package.json');
+        if (!existsSync(file)) continue;
+        const pkg = JSON.parse(readFileSync(file, 'utf8')) as Pkg;
+        if (pkg.name !== undefined) byName.set(pkg.name, new Set(Object.keys(pkg.scripts ?? {})));
+      }
+    }
+    // pnpm's own commands; anything else after `pnpm` must be a script.
+    const pnpmBuiltins = new Set([
+      'install',
+      'i',
+      'add',
+      'remove',
+      'update',
+      'exec',
+      'run',
+      'dlx',
+      'audit',
+      'licenses',
+      'sbom',
+      'ls',
+      'list',
+      'why',
+      'store',
+      'config',
+      'outdated',
+      'prune',
+      'rebuild',
+    ]);
+    const known = new Set(buildProgram(makeCli().ctx, { code: 0 }).commands.map((c) => c.name()));
+    const problems: string[] = [];
+    for (const file of markdownFiles) {
+      const rel = relative(root, file);
+      if (rel.startsWith('docs/decisions/') || rel === 'CHANGELOG.md') continue; // history, not instructions
+      for (const block of readFileSync(file, 'utf8').matchAll(
+        /```(?:bash|sh|shell|powershell)?\n([\s\S]*?)```/g,
+      )) {
+        for (const raw of (block[1] ?? '').split('\n')) {
+          const line = raw.trim().replace(/^[$>]\s*/, '');
+          if (!/^pnpm\s/.test(line)) continue;
+          const filter = /^pnpm\s+(?:--filter|-F)\s+(\S+)/.exec(line)?.[1];
+          const word =
+            /^pnpm\s+(?:(?:--filter|-F|--dir|-C)\s+\S+\s+|-[-\w]+\s+)*([a-z][\w:-]*)/.exec(
+              line,
+            )?.[1];
+          if (word === undefined || pnpmBuiltins.has(word)) continue;
+          if (word === 'exitos') {
+            const sub = /^pnpm\s+exitos\s+(?:--[\w-]+\s+)*([a-z][\w-]*)/.exec(line)?.[1];
+            if (sub !== undefined && !known.has(sub)) problems.push(`${rel}: ${line}`);
+            continue;
+          }
+          const scripts =
+            filter === undefined ? rootScripts : (byName.get(filter) ?? new Set<string>());
+          if (!scripts.has(word)) problems.push(`${rel}: ${line}`);
+        }
+      }
+    }
+    expect(problems).toEqual([]);
   });
 
   it('.env.example documents exactly the variables the CLI reads from .env', () => {
@@ -165,10 +234,18 @@ describe('documentation stays true', () => {
     );
     expect(readme).toContain('Notion');
     expect(readme).toContain('ClickUp');
-    for (const claimed of ['Jira', 'Asana', 'Trello', 'Airtable', 'Linear', 'Monday']) {
-      // They may be mentioned as examples of FUTURE work, never in the supported matrix.
-      const matrix = readme.split('## Supported migration matrix')[1]?.split('\n## ')[0] ?? '';
-      expect(matrix, claimed).not.toContain(claimed);
+    for (const [file, heading] of [
+      ['README.md', '## What is supported, and what is not'],
+      ['README.ko.md', '## 지원하는 것과 지원하지 않는 것'],
+    ] as const) {
+      // Guard against this test silently checking nothing: the section must exist and have content.
+      const matrix = read(file).split(heading)[1]?.split('\n## ')[0] ?? '';
+      expect(matrix.length, `${file}: section "${heading}" not found`).toBeGreaterThan(200);
+      expect(matrix, file).toContain('ClickUp');
+      for (const claimed of ['Jira', 'Asana', 'Trello', 'Airtable', 'Linear', 'Monday']) {
+        // They may be mentioned as examples of FUTURE work, never in the supported matrix.
+        expect(matrix, `${file}: ${claimed}`).not.toContain(claimed);
+      }
     }
   });
 

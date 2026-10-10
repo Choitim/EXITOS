@@ -7,11 +7,21 @@ security reports seriously.
 
 **Please do not open a public issue.** Report privately using GitHub's
 [private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
-("Security" tab → "Report a vulnerability") on this repository.
+("Security" tab → "Report a vulnerability", or
+<https://github.com/Choitim/EXITOS/security/advisories/new>) on this repository.
 
-> **Maintainers, before making the repository public:** enable _Private vulnerability reporting_ in the
-> repository settings, otherwise this section has no working channel. Also fill in the contact in
-> `CODE_OF_CONDUCT.md`.
+> **TODO (maintainer): no private reporting channel is confirmed to be active.** Until you choose one,
+> this section promises something a reporter may not be able to use. Pick one of these, then delete this
+> note:
+>
+> 1. **GitHub private vulnerability reporting** (recommended): enable _Private vulnerability reporting_ in
+>    the repository's security settings. The link above and the "Security vulnerability" entry in the issue
+>    chooser then work.
+> 2. **A monitored mailbox:** replace this line with `TODO: security contact address` once you have an
+>    address that someone reads. Do not publish a personal address by accident.
+> 3. **Both.**
+>
+> Also fill in the enforcement contact in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 Include: what you found, how to reproduce it (a synthetic fixture is ideal), the affected version or
 commit, and the impact you expect. **Never include real tokens, plan files, `.env` files or unredacted
@@ -46,7 +56,8 @@ control of your machine or your shell environment; findings about test fixtures.
 Credentials only from the environment; never written to disk by ExitOS; redacted from output. A source
 connection that cannot write; a destination connection that can only create. Plans are hash-sealed and
 approved by id. The dashboard is loopback-only, read-only, with a strict CSP. Details and evidence:
-[docs/security-review.md](docs/security-review.md).
+[docs/security-review.md](docs/security-review.md). That review was written by the maintainers; there has been
+no independent audit or penetration test, so treat these as tested claims, not certification.
 
 ## Safe handling tips for users
 

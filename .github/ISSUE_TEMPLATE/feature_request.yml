@@ -20,3 +20,9 @@ body:
     attributes:
       label: Safety considerations
       description: Could this write somewhere new, delete or overwrite anything, or touch credentials? How would the plan show it?
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to help build this, and would appreciate pointers to the right files

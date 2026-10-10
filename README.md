@@ -1,172 +1,239 @@
 <div align="center">
 
-# ExitOS
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+  <img src="docs/assets/logo.svg" alt="ExitOS" width="260">
+</picture>
 
-**See what survives before you switch apps.**
+**English** | [한국어](README.ko.md)
 
-[![CI](https://img.shields.io/badge/CI-GitHub%20Actions-lightgrey)](.github/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%E2%89%A522.13-339933)](package.json)
+### See what survives before you switch apps.
+
+Preview a migration, approve it, apply it, and verify the result — with everything that is lost or
+unsupported listed up front. Open source, local-first, no account.
+
+[![CI](https://github.com/Choitim/EXITOS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Choitim/EXITOS/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/github/license/Choitim/EXITOS)](LICENSE)
+[![Node.js 22.13+](https://img.shields.io/badge/node-%E2%89%A522.13-339933)](package.json)
+[![Status: pre-release](https://img.shields.io/badge/status-pre--release-d97706)](docs/validation-log.md)
+
+[Quick start](#quick-start) · [Offline demo](#offline-demo) · [How it works](#how-it-works) ·
+[Notion → ClickUp](#notion--clickup-migration) · [Contributing](#contributing)
+
+<img src="docs/assets/exitos-hero.png" alt="The ExitOS dashboard showing a verified migration of a synthetic Notion workspace to ClickUp, with the plan, the run and a read-only approve command" width="880">
+
+<sub>The local dashboard (`exitos ui --demo`) on the built-in synthetic workspace. Real output, fake data.</sub>
 
 </div>
 
-Moving between tools is a leap of faith: you learn what was lost _after_ the import. ExitOS turns
-migration into **plan → approve → apply → verify** and tells you the truth at every step:
+## What is ExitOS?
 
-1. **A read-only plan** lists everything that **moves as-is**, **changes shape**, **loses detail**, or
-   **cannot move** — before anything is written anywhere.
-2. **You approve that exact plan** (by its id). The source is never modified; nothing is ever deleted or
-   overwritten.
-3. **Apply is resumable** and survives rate limits, crashes and lost replies without creating duplicates.
-4. **Verification** compares the plan with what the destination actually holds — and the report still
-   lists what did _not_ survive. A run is only "complete" once it verifies.
+Moving your work from one app to another usually means: export, import, and then discover what broke.
+ExitOS changes the order.
 
-Open source (Apache-2.0), local-first, no account. **v0.1 migrates Notion → ClickUp.**
+1. **It reads first.** ExitOS looks at your Notion workspace (read-only) and shows you a **plan**: what
+   will be _preserved_, what will _change shape_, what _requires review_ and what _cannot move at all_.
+2. **You approve that exact plan.** Nothing is written until you do, and the source is never modified.
+3. **It applies the plan safely.** If a rate limit, a crash or a lost reply interrupts it, it resumes
+   without creating duplicates.
+4. **It verifies the result.** ExitOS compares the plan with what ClickUp actually holds, and the final
+   report still lists everything that did _not_ survive.
 
-![ExitOS demo: the plan lists what moves, what changes and what cannot move; apply recovers from injected failures; verification passes; the report lists what was not preserved](docs/assets/demo.svg)
+ExitOS runs on your own machine. Your data goes only to the two APIs you configure (Notion and ClickUp),
+and there is no telemetry. **v0.1 migrates Notion database rows to ClickUp tasks.**
 
-<sub>↑ Real output of `pnpm exitos demo` (an excerpt; synthetic data; fully offline). Regenerate with
-`pnpm docs:assets`.</sub>
-
-> **Status: v0.1 pre-release.** The offline demo, the engine, and both connectors work and are
-> extensively tested **against API-shaped fakes** (in-process and over real loopback HTTP). **They
-> have not yet been validated against live Notion or ClickUp workspaces** — see
-> [docs/live-sandbox-testing.md](docs/live-sandbox-testing.md) and
-> [docs/validation-log.md](docs/validation-log.md). Page → ClickUp **Docs** migration is
-> **experimental**. ClickUp's own importer is free and may be all you need
+> **Status: v0.1 pre-release.** The engine, both connectors, the CLI and the dashboard work and are
+> extensively tested against API-shaped fakes. **They have not been validated against live Notion or
+> ClickUp workspaces yet**, so use test workspaces first ([guide](docs/live-sandbox-testing.md),
+> [validation log](docs/validation-log.md)). Notion pages → ClickUp **Docs** is **experimental**. ClickUp's
+> own importer is free and may be all you need
 > ([honest comparison](docs/competitive-landscape.md)).
+
+## Why ExitOS?
+
+| What usually goes wrong                            | What ExitOS does about it                                                                                                                 |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| You learn what was lost only **after** the import. | A read-only **plan** lists everything that moves, changes, requires review or cannot move, before anything is written.                    |
+| What got lost is hard to know.                     | Every unsupported or lossy item is a coded finding; the report always has a **NOT PRESERVED** section.                                    |
+| A big import fails halfway.                        | Checkpointed **apply** that resumes after a crash or rate limit and is built not to re-create what already exists (proved against fakes). |
+| "Imported" is not "correct".                       | **Verify** compares the plan with what the destination really holds. A run is complete only when it verifies.                             |
+| Your data passes through someone else's cloud.     | **Local-first**: no account, no telemetry, only the two APIs you configure.                                                               |
+| The tool is a black box.                           | An **open connector SDK** with a conformance kit; the engine and both connectors are in this repository.                                  |
+
+Where ExitOS is **weaker**, honestly: it supports one migration (Notion → ClickUp), it has not been run
+against live workspaces yet, it does not transfer attachment files, there is no hosted version, and there is
+no automatic undo (ClickUp's own importer can delete an import made in the last 10 days). Several of these
+ideas exist elsewhere too, and some claims above are only partly proven. The
+[evidence table](docs/competitive-landscape.md#evidence-for-our-positioning) says, claim by claim, what
+proves it in this repository and what the alternatives do.
+
+## How it works
+
+```
+Inspect  →  Plan  →  Approve  →  Apply  →  Verify
+(read)     (read)    (you, by    (writes to  (read)
+                      plan id)   the destination only)
+```
+
+| Step        | Command                                    | What happens                                                                  |
+| ----------- | ------------------------------------------ | ----------------------------------------------------------------------------- |
+| **Inspect** | `exitos inspect notion` / `clickup`        | Lists what each token can see. Read-only.                                     |
+| **Plan**    | `exitos plan notion clickup`               | Builds a hash-sealed plan and prints what moves and what does not. Read-only. |
+| **Approve** | `exitos apply --plan … --approve <planId>` | You approve one specific plan by its id. An edited plan is refused.           |
+| **Apply**   | (same command)                             | Writes to ClickUp only, with bounded concurrency, retries and checkpoints.    |
+| **Verify**  | `exitos verify` · `exitos report`          | Compares plan and destination; reports what was **not** preserved.            |
+
+Everything ExitOS reports uses six plain states, in the terminal, the dashboard and the docs:
+
+| State               | Meaning                                                     |
+| ------------------- | ----------------------------------------------------------- |
+| **Preserved**       | Moves as-is.                                                |
+| **Transformed**     | Arrives, but in a different shape (for example as text).    |
+| **Requires review** | Arrives, but some detail is lost. Look at it.               |
+| **Unsupported**     | Cannot move. It is listed, never silently dropped.          |
+| **Failed**          | A write failed (and what depended on it was not attempted). |
+| **Verified**        | The destination was read back and matches the plan.         |
 
 ## Quick start
 
-**Try it offline — no account, no network, no credentials (about a minute):**
+You need **Node.js 22.13 or newer**, **pnpm** and **Git**. Check with `node --version`,
+`pnpm --version` and `git --version`.
 
 ```bash
-git clone <this-repo> exitos && cd exitos     # Node >= 22.13 and pnpm required
+git clone https://github.com/Choitim/EXITOS.git
+cd EXITOS
 pnpm install
 pnpm build
-pnpm exitos demo          # plan → approve → apply → verify on a synthetic workspace (~1 s)
+pnpm exitos demo
+```
+
+The same five commands work in macOS Terminal, Linux shells and **Windows PowerShell**. If something is
+missing, `pnpm exitos doctor` tells you what and how to fix it.
+
+<details>
+<summary><b>Installing the prerequisites</b> (macOS, Linux, Windows PowerShell)</summary>
+
+| System                 | Commands                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **macOS**              | `brew install node pnpm git`                                                                                          |
+| **Linux**              | Install Node.js 22.13+ with your package manager or [nvm](https://github.com/nvm-sh/nvm), then `npm install -g pnpm`. |
+| **Windows PowerShell** | `winget install OpenJS.NodeJS.LTS`, `winget install Git.Git`, open a **new** terminal, then `npm install -g pnpm`.    |
+
+pnpm is pinned in `package.json` (`packageManager`); see [pnpm.io/installation](https://pnpm.io/installation)
+for other ways to install it. The Windows instructions are documented but **not tested** by the
+maintainers (CI runs on Linux and macOS); WSL2 is a safe alternative.
+
+</details>
+
+## Offline demo
+
+The demo needs **no account, no credentials, no network and no paid service**. It runs the real Notion and
+ClickUp connectors against in-process fake APIs on a synthetic workspace
+([why](docs/decisions/0008-demo-runs-real-connectors-on-fakes.md)), and injects rate limits and a lost
+reply on purpose so you can watch recovery.
+
+```bash
+pnpm exitos demo          # inspect → plan → approve → apply → verify, in about a second
 pnpm exitos ui --demo     # explore the same run in the local, read-only dashboard
 ```
 
-The demo runs the **real** Notion and ClickUp connectors against in-process fake APIs
-([ADR 0008](docs/decisions/0008-demo-runs-real-connectors-on-fakes.md)). It injects rate limits and a
-lost reply on purpose so you can watch recovery. Try `pnpm exitos demo --interrupt-after 40` and then
-`pnpm exitos resume --demo`.
+<div align="center">
 
-**A real migration** (use **test workspaces** first — the [sandbox guide](docs/live-sandbox-testing.md)
-walks through it):
+<img src="docs/assets/demo.svg" alt="Terminal output of pnpm exitos demo: what moves, what changes and what cannot move; recovery from a lost reply; verification; and the list of what was not preserved" width="760">
+
+<sub>An excerpt of the real output of `pnpm exitos demo` (synthetic data). Regenerate it with `pnpm docs:assets`.</sub>
+
+</div>
+
+<div align="center">
+
+<img src="docs/assets/exitos-demo.gif" alt="The guided tour of the ExitOS browser demo: select a sample Notion workspace, inspect it, preview compatibility, view the mapping, replay the migration, review the verification report" width="880">
+
+<sub>The guided tour of the browser demo, recorded from the real build (synthetic data).</sub>
+
+</div>
+
+Things to try: `pnpm exitos demo --interrupt-after 40` then `pnpm exitos resume --demo` (a simulated crash,
+then recovery); `pnpm exitos report --demo --format markdown` (a report you can share);
+`pnpm exitos inspect notion --demo` (every property and how it fares).
+
+**In a browser, without connecting anything:** the repository also builds a static, simulated demo: a
+guided tour (sample workspace → inspect → compatibility → mapping → a **replay** of the recorded run →
+verification) on the real dashboard, with no login, no backend and no network access to Notion or ClickUp.
+Run it locally with `pnpm build:demo` and `pnpm preview:demo`. A hosted copy on GitHub Pages is **not
+published yet**; see [docs/online-demo.md](docs/online-demo.md) for how it works and how to publish it.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/exitos-preview.png" alt="The mapping preview: every source property, where it goes in ClickUp and whether it is preserved, transformed, requires review or unsupported"></td>
+<td width="50%"><img src="docs/assets/exitos-verification.png" alt="The verification report: items verified, expected versus found per target, and what was and was not checked"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>Preview</b>: what will happen, before anything is written</sub></td>
+<td align="center"><sub><b>Verification</b>: what actually arrived, and what was not checked</sub></td>
+</tr>
+</table>
+
+## Notion → ClickUp migration
+
+> Use **test workspaces** first. ExitOS never modifies Notion and never deletes or overwrites anything in
+> ClickUp, but there is **no automatic undo**: if you do not want the created tasks, you delete them in
+> ClickUp. ClickUp notifies people assigned to tasks created through its API, so people are mapped only if
+> you list them explicitly. The [sandbox guide](docs/live-sandbox-testing.md) walks through a safe first
+> run.
+
+**1. Credentials.** Create a Notion internal connection and a ClickUp personal API token
+([Notion](https://developers.notion.com/guides/get-started/internal-connections),
+[ClickUp](https://developer.clickup.com/docs/authentication)), share only the pages you want migrated with
+the Notion connection, and put both tokens in `.env`:
 
 ```bash
-cp .env.example .env && chmod 600 .env             # add NOTION_TOKEN and CLICKUP_API_TOKEN
-cp migration.example.yaml migration.yaml           # fill in your ids
+cp .env.example .env && chmod 600 .env     # macOS / Linux
+# PowerShell:  Copy-Item .env.example .env
+# then edit .env: NOTION_TOKEN=…  CLICKUP_API_TOKEN=…
+```
 
-pnpm exitos inspect notion                         # what is shared with your Notion connection
-pnpm exitos inspect clickup                        # your Workspaces and List ids
-pnpm exitos plan notion clickup --config migration.yaml     # READ-ONLY; writes migration-plan.json
+**2. Check your setup.** `pnpm exitos doctor --live` verifies Node.js, the tokens, your proxy and your
+config, and says how to fix anything missing. `pnpm exitos doctor --online` also proves the tokens work
+with read-only calls.
+
+**3. Find your ids and write the config.**
+
+```bash
+pnpm exitos inspect notion                  # what is shared with your Notion connection
+pnpm exitos inspect clickup                 # your Workspaces and List ids
+cp migration.example.yaml migration.yaml    # PowerShell: Copy-Item migration.example.yaml migration.yaml
+```
+
+**4. Plan, approve, apply, verify.**
+
+```bash
+pnpm exitos plan notion clickup                                   # READ-ONLY; writes migration-plan.json
 pnpm exitos apply --plan migration-plan.json --approve <planId>   # or omit --approve to be prompted
-pnpm exitos verify                                 # a migration is not complete until this passes
-pnpm exitos report --format markdown --out report.md   # add --redact before sharing it
+pnpm exitos verify                                                # a run is not complete until this passes
+pnpm exitos report --format markdown --out report.md              # add --redact before sharing it
 ```
 
-Other commands: `status` · `resume` · `ui` · `connectors`. Run `pnpm exitos --help`.
+Behind a **corporate proxy**? Set `HTTPS_PROXY` (and `NO_PROXY`, `NODE_EXTRA_CA_CERTS` if your proxy
+inspects HTTPS). ExitOS contacts exactly two hosts, `api.notion.com` and `api.clickup.com`. Details in
+[enterprise readiness](docs/enterprise-readiness.md). The other commands are `status`, `resume`, `ui` and
+`connectors`; run `pnpm exitos --help`.
 
-**Behind a corporate proxy?** Set the standard variables before running: `HTTPS_PROXY`
-(`http://user:password@host:port`), `NO_PROXY` for hosts that must skip it, and `NODE_EXTRA_CA_CERTS`
-if your proxy inspects HTTPS. Credentials are never printed. ExitOS contacts exactly two hosts,
-`api.notion.com` and `api.clickup.com`. Details: [enterprise readiness](docs/enterprise-readiness.md).
+## What is supported, and what is not
 
-## Example output
+| Source → destination                           | Status             | Notes                                                                                                                                                                               |
+| ---------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Notion database rows → ClickUp tasks**       | ✅ implemented     | Name, Markdown body, status, priority, start/due dates (time-zone aware), mapped assignees, existing tags and Custom Fields, linked tasks for relations. Tested against fakes only. |
+| **Notion pages → ClickUp Docs** (nested pages) | 🧪 experimental    | Behind `options.experimental.docs`; endpoints not live-validated; several block types lose detail.                                                                                  |
+| Anything else                                  | ❌ not implemented | No other connector pair ships in v0.1. See the [connector guide](docs/connector-sdk.md) to add one.                                                                                 |
 
-```text
-HERE IS EVERYTHING THAT MOVES, CHANGES, AND CANNOT MOVE
-  ✔ MOVES AS-IS     3 of 175 actions      7 field mapping(s) are exact
-  ↻ CHANGES SHAPE   115 of 175 actions    8 mapping(s) store the value differently
-  ⚠ LOSES DETAIL    57 of 175 actions     9 mapping(s) lose information
-  ✖ CANNOT MOVE     12 finding(s)         1 property type(s) never move
-
-  ✖ unsupported      2  Attachments: Files hosted by Notion are not downloaded or re-uploaded…
-  ✖ unsupported      1  child_database: An inline database inside a page body is not migrated here…
-  ⚠ lossy           28  Open dependencies: Formula/rollup logic is not migrated; only the last…
-  ⚠ lossy           26  State: Status "Won't fix" has no equivalent on the ClickUp list…
-  ↻ transformed      9  Depends on: Relation becomes a ClickUp linked task (symmetric…
-
-  ↺ "Calibrate joint encoders": reply lost → checked ClickUp: it WAS created — adopted, not re-sent
-  Duplicates      0 — every Notion row exists in ClickUp exactly once
-
-  ✔ VERIFIED    175 verified · 0 mismatched · 0 missing · 0 unverified
-```
-
-That is the _synthetic demo workspace_ (28 roadmap rows, 130 bugs, 5 pages), not a real result. A
-real run's numbers come from your workspace; [docs/finding-codes.md](docs/finding-codes.md) explains
-every line.
-
-![Dashboard](docs/assets/dashboard-overview.png)
-
-## Supported migration matrix
-
-| Source → destination                                   | Status                                        | Notes                                                                                                                                                                 |
-| ------------------------------------------------------ | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Notion database (data source) rows → ClickUp tasks** | ✅ implemented, mock-tested                   | name, Markdown body, status, priority, start/due dates (time-zone aware), assignees (explicit map), existing tags, existing Custom Fields, linked tasks for relations |
-| **Notion pages → ClickUp Docs** (nested pages)         | 🧪 experimental (`options.experimental.docs`) | documented v3 endpoints; not live-validated; lossy for several block types                                                                                            |
-| Anything else                                          | ❌ not implemented                            | no other connectors ship in v0.1                                                                                                                                      |
-
-Field-level detail: [docs/product-spec.md](docs/product-spec.md#42-supported-migration-matrix).
-
-## What does NOT migrate
-
-Attachment and image **bytes** (Notion-hosted files; external links are kept) · comments and
-discussions · page and database **permissions** · version history · database **views**, filters,
-templates, buttons, automations · page icons and covers · ClickUp **Custom Field creation** (the
-ClickUp API cannot create them — only existing ones are filled) · subtasks and task dependencies ·
-original creation/edit timestamps and authors (kept as text) · formula/rollup _logic_ (last value kept
-as text) · Notion-only block types (toggles, columns, synced blocks, callouts, colours, underline
-arrive simplified). The plan prints this list for every run, and each affected item is a finding — see
-[docs/finding-codes.md](docs/finding-codes.md).
-
-## Safety model
-
-```
-inspect  →  plan  →  approve  →  apply  →  verify  →  report
-(read)     (read)    (you, by    (writes to  (read)     (read)
-                      plan id)   destination
-                                 ONLY)
-```
-
-- **Read-only by default.** `inspect`, `plan`, `verify`, `report`, `ui`, `demo` never write to a real
-  system. Dry-run is proved in tests with request spies (zero write requests), and the source
-  connection is read-only in _every_ command.
-- **Explicit approval.** `apply` needs `--approve <planId>` (or typing it). Plans are hash-sealed;
-  an edited plan is refused.
-- **Never destructive.** Nothing in the source is modified; nothing in the destination is deleted or
-  overwritten. Writes are limited to four ClickUp create endpoints; everything else is blocked by code.
-- **Never silent.** Unsupported and lossy content is always reported. No "zero data loss" claims.
-- **Verified or not complete.** `applied` ≠ `verified`; only a passing `verify` completes a run.
-- **No secrets on disk.** Tokens come from the environment; they are redacted from output and never
-  written to plans, state or reports.
-- **No telemetry.** Nothing is sent anywhere except to the two APIs you configure; there is no
-  analytics code. State and plans stay in a local `0700` directory with `0600` files.
-- **People are never guessed.** Notion and ClickUp user ids are unrelated; assignment is opt-in via an
-  explicit map (ClickUp notifies assignees of API-created tasks).
-
-Details: [reliability model](docs/reliability.md) (what is and is **not** guaranteed — exactly-once is
-not claimed) · [security review](docs/security-review.md) · [SECURITY.md](SECURITY.md).
-
-## Enterprise readiness
-
-ExitOS is built to be evaluated by a company, but it is **not yet enterprise-ready**: nobody has run it
-against live Notion or ClickUp, and it has had no independent security review. The
-[full self-assessment](docs/enterprise-readiness.md) gives the evidence and the gaps for every area.
-In short:
-
-| Area                  |     | State                                                                                                                              |
-| --------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Safe by construction  | ✅  | Read-only source, nothing deleted or overwritten, approval by plan id, verification, no telemetry.                                 |
-| Corporate networks    | ✅  | Proxy, `NO_PROXY` and custom-CA support, tested against a real local proxy (not yet a real corporate one).                         |
-| Supply chain          | ✅  | 5 third-party runtime packages, all MIT/ISC; license allow-list, SBOM, `pnpm audit`, CodeQL and dependency review run in CI.       |
-| Tests                 | ✅  | 628 tests plus 28 browser tests; 88 % statement coverage with an enforced floor. Safety-critical tests are mutation-checked.       |
-| Scale                 | 🟡  | Measured to 100 000 rows under fakes (about 2.7 GB of memory); a real run is paced by the destination's rate limit, not by ExitOS. |
-| Live validation       | ❌  | Never run against real Notion or ClickUp. This is the main blocker.                                                                |
-| Assurance and support | ❌  | No independent audit, signed releases, Windows support, SSO/roles or support commitment.                                           |
+**What does not migrate:** attachment and image **bytes** (external links are kept) · comments and
+discussions · page and database permissions · version history · views, filters, templates and automations ·
+page icons and covers · creating ClickUp Custom Fields (the API cannot; existing ones are filled) ·
+subtasks and task dependencies · original creation/edit timestamps and authors (kept as text) · formula
+and rollup _logic_ (the last value is kept as text) · some Notion-only block types (toggles, columns,
+synced blocks and callouts arrive simplified). The plan lists this for every run, and each affected item is
+a finding: see [docs/finding-codes.md](docs/finding-codes.md).
 
 ## Architecture
 
@@ -180,40 +247,28 @@ In short:
                                    SQLite state · local read-only dashboard
 ```
 
-TypeScript (strict, no `any`) · Zod at every trust boundary · SQLite via built-in `node:sqlite` ·
-Vitest · React + Vite + Tailwind dashboard. Packages: `shared`, `core`, `connector-notion`,
-`connector-clickup`, `apps/cli`, `apps/web`. Read [docs/architecture.md](docs/architecture.md) and the
-[decision records](docs/decisions/README.md).
-
-## Connector SDK
-
-A connector is an object implementing `SourceConnector` (read) or `DestinationConnector`
-(plan/apply/verify) from `@exitos/core/sdk`. A conformance kit (`@exitos/core/testing`) checks the
-contract, and [`examples/example-connector`](examples/example-connector/src/index.ts) is a complete,
-tested template. Guide: [docs/connector-sdk.md](docs/connector-sdk.md).
-
-## Project status and checks
-
-`pnpm check` runs formatting, lint, strict typecheck, tests and build; CI runs them on Node 22 and 24
-and macOS, plus the dashboard browser test, a license allow-list (`pnpm check:licenses`), coverage with a
-floor (`pnpm test:coverage`), an SBOM (`pnpm sbom:generate`), `pnpm audit`, CodeQL, and a dependency
-review on pull requests. Results of the last full local run are recorded in
-[CHANGELOG.md](CHANGELOG.md) and the release notes — not inflated, and not a substitute for live
-validation. Documentation tests keep these docs honest (every finding code documented, every link and
-CLI command real).
+TypeScript (strict, no `any`) · Zod at every trust boundary · SQLite via Node's built-in `node:sqlite` ·
+Vitest and Playwright · React, Vite and Tailwind for the dashboard. The source and the destination only
+ever talk through the normalized model, which is what makes a new connector a self-contained piece of
+work. Read the [architecture](docs/architecture.md), the [reliability model](docs/reliability.md) (what
+is and is **not** guaranteed: exactly-once is not claimed) and the [security review](docs/security-review.md).
 
 ## Roadmap
 
-Live validation and hardening → streaming extraction and opt-in attachment transfer → a second
-connector pair. See [ROADMAP.md](ROADMAP.md). Market and launch thinking (hypotheses only):
-[docs/market-thesis.md](docs/market-thesis.md), [docs/launch-plan.md](docs/launch-plan.md).
+Live validation and hardening → streaming extraction and opt-in attachment transfer → a second connector
+pair. Details and the enterprise track are in [ROADMAP.md](ROADMAP.md) and
+[docs/enterprise-readiness.md](docs/enterprise-readiness.md), which says plainly what still blocks
+calling ExitOS enterprise-ready.
 
 ## Contributing
 
-Contributions are very welcome — especially **live validation reports** from test workspaces, new
-fixtures, and connectors. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the
-[Code of Conduct](CODE_OF_CONDUCT.md). If ExitOS saves you from a painful migration, a star helps
-others find it.
+Contributions are welcome, and the most valuable one is a **live validation report** from a test
+workspace. Start with [CONTRIBUTING.md](CONTRIBUTING.md), the [local development guide](docs/development.md)
+and the [testing guide](docs/testing.md); pick something small from
+[good first contributions](docs/good-first-contributions.md), or build a connector with the
+[connector guide](docs/connector-sdk.md). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md), and
+report vulnerabilities as described in [SECURITY.md](SECURITY.md). If ExitOS saves you from a painful
+migration, a star helps others find it.
 
 ## License
 

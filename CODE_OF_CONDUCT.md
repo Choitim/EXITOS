@@ -36,9 +36,23 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at **[INSERT CONTACT METHOD — maintainers must fill this in before the repository is made public]**. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community
+leaders responsible for enforcement at **TODO (maintainer): enforcement contact not set yet**. All
+complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
+
+> **TODO (maintainer):** this contact must exist before the Code of Conduct can be enforced. Choose one
+> and replace the placeholder above (then delete this note):
+>
+> 1. **A dedicated, monitored mailbox** that you control and read. Write it here in place of the
+>    placeholder; do not publish a personal address by accident.
+> 2. **A second person or an outside party** who can receive reports about the maintainer, so a report
+>    about you does not land only with you.
+>
+> For behavior on GitHub itself, GitHub's own tools for reporting content and users also exist, but they
+> do not replace a contact that reaches the leaders of this project. Add the same contact to
+> `SECURITY.md` if you want one address for both.
 
 ## Enforcement Guidelines
 
@@ -70,23 +84,18 @@ Community leaders will follow these Community Impact Guidelines in determining t
 
 ## Attribution
 
-This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 2.1, available at [https://www.contributor-covenant.org/version/2/1/code_of_conduct.html][v2.1].
+This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 2.1, available at
+[https://www.contributor-covenant.org/version/2/1/code_of_conduct.html][v2.1]. The Contributor Covenant
+is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 Community Impact Guidelines were inspired by [Mozilla's code of conduct enforcement ladder][Mozilla CoC].
 
-For answers to common questions about this code of conduct, see the FAQ at [https://www.contributor-covenant.org/faq][FAQ]. Translations are available at [https://www.contributor-covenant.org/translations][translations].
+For answers to common questions about this code of conduct, see the FAQ at
+[https://www.contributor-covenant.org/faq][FAQ]. Translations are available at
+[https://www.contributor-covenant.org/translations][translations].
 
 [homepage]: https://www.contributor-covenant.org
 [v2.1]: https://www.contributor-covenant.org/version/2/1/code_of_conduct.html
 [Mozilla CoC]: https://github.com/mozilla/diversity
 [FAQ]: https://www.contributor-covenant.org/faq
 [translations]: https://www.contributor-covenant.org/translations
-
-## Attribution
-
-This Code of Conduct is adapted from the [Contributor Covenant][homepage], version 2.1, available at
-[https://www.contributor-covenant.org/version/2/1/code_of_conduct.html][v2.1]. It is licensed under
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-
-[homepage]: https://www.contributor-covenant.org
-[v2.1]: https://www.contributor-covenant.org/version/2/1/code_of_conduct.html

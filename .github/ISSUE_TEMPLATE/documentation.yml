@@ -1,0 +1,47 @@
+name: Documentation problem
+description: Something in the docs or README is wrong, unclear, out of date or missing
+labels: [documentation]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Documentation fixes are among the easiest first contributions: see
+        `docs/good-first-contributions.md`. Never paste tokens, `.env` files, plan files or unredacted reports.
+  - type: input
+    id: where
+    attributes:
+      label: Where is the problem?
+      description: The file or page and, if you can, the heading or line.
+      placeholder: 'docs/development.md, "Common problems"'
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem is it?
+      options:
+        - Incorrect or out of date (does not match what the tool does)
+        - Unclear or confusing
+        - Missing information
+        - Broken link or command that does not work
+        - README.ko.md and README.md disagree
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What is wrong or missing?
+      description: What did you try, what did the docs say, and what happened instead? Include your OS, Node.js and pnpm versions if a command failed.
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suggested wording or fix
+      description: Optional. A sentence is enough.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to fix this myself in a pull request

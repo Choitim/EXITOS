@@ -10,9 +10,12 @@
 
 People and teams routinely move between software products — task trackers, wikis, CRMs, help desks.
 Today's options are (a) the destination's importer, (b) a paid migration service, (c) automation glue, or
-(d) manual copy-paste. The recurring pain points that are _documented_ by vendors themselves (e.g.
-ClickUp's own list of what its Notion importer does not import) are: no preview, content that silently
-changes shape, and no per-run account of what was lost.
+(d) manual copy-paste. What vendors themselves _document_ (e.g. ClickUp's own list of what its Notion
+importer does not import) is: content that arrives in a different shape or not at all, and no preview
+in the Notion importer's help page. ClickUp does keep a per-import report with errors and lets you delete
+an import made in the last 10 days; a per-item list of lossy conversions is not documented
+([competitive-landscape.md](competitive-landscape.md), read 2026-10-09). The pain is therefore narrower than
+"vendor importers are black boxes": it is "I cannot read a plan, with the losses sorted, before I run it".
 
 **[H1]** For a meaningful set of switchers, the blocker is not the cost of migrating but the _fear of
 not knowing what will be lost_. _Confirm if:_ in user conversations, "I can't tell what I'd lose" is a
@@ -33,10 +36,19 @@ live-validated Notion → ClickUp earns contributions and validation reports bef
 ## 3. Existing alternatives
 
 Documented in [competitive-landscape.md](competitive-landscape.md): ClickUp's native importer (free,
-first-party, ZIP-based, no documented preview), multi-app migration SaaS (e.g. Import2 — Notion not
-listed as a source when checked), sync/automation tools (Unito, Zapier, Make, n8n), ELT frameworks
-(Airbyte, Meltano, dlt), exporters, and ad-hoc AI-agent workflows over the vendors' MCP servers. The
-analysis explicitly records where incumbents are better.
+first-party, ZIP-based, no documented preview, with an import report and a 10-day delete), ClickUp's
+Spreadsheets importer (live data preview during field mapping), multi-app migration SaaS (Import2 offers a
+free, reversible sample migration and claims 250+ apps, Notion not listed on the pages read; Help Desk
+Migration advertises a demo and an audit report for help-desk platforms), sync/automation tools (Unito,
+Skyvia, Zapier, Make, n8n), ELT frameworks (Airbyte, Meltano, dlt), exporters, and ad-hoc AI-agent workflows
+over the vendors' MCP servers. The analysis explicitly records where incumbents are better.
+
+**[H10]** Because a preview, a report or a demo migration each exist somewhere, the defensible position is
+the _combination_ for a specific pair (a read-only plan with losses sorted, approval by plan id, resumable
+apply, read-back verification) together with open source and execution on the user's own machine, not any
+single feature. _Confirm if:_ people who tried ClickUp's importer say the missing read-only plan and loss
+list is why they try ExitOS. _Kill if:_ they say the importer's own report was enough, or that an
+Import2-style sample migration answers the question.
 
 ## 4. Why a horizontal connector engine might have an advantage
 
@@ -54,9 +66,11 @@ connectors after the first month.
 
 - Apache-2.0, local-first, no accounts, a **zero-credential offline demo** as the top of the funnel.
 - Trust is the product: honest limits, public ADRs, reproducible demo, redacted reports for support.
-- Contribution surface: connectors, fixtures, validation runs, translations.
-- Channels: developer communities and consultant forums (see [launch-plan.md](launch-plan.md));
-  no purchased attention.
+- Contribution surface: connectors, fixtures, validation runs, documentation. (Translating finding
+  messages needs a message catalogue first; see [good-first-contributions.md](good-first-contributions.md).)
+- Channels: developer communities and consultant forums where the rules allow it (see
+  [open-source-launch.md](open-source-launch.md)); no purchased attention. There are no users or
+  contributors yet, so no distribution result is claimed.
 
 **[H6]** A runnable demo that visibly tells the truth about loss converts better than a feature
 list. _Confirm if:_ demo completions (self-reported / via issues) correlate with live validation runs.
@@ -83,14 +97,14 @@ consultancies. None is validated; **no pricing or revenue projection is offered.
 
 ## 8. Major risks
 
-| Risk                 | Why it matters                                                                                                                                                                                                                   |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Competitive**      | ClickUp or Import2 add a preview/loss report; AI agents with MCP servers do ad-hoc migrations; the free importer is "good enough".                                                                                               |
-| **API**              | Notion and ClickUp change APIs (Notion already changed to data sources in 2025-09-03; ClickUp Docs is v3). Terms of service or rate limits could limit bulk use. ClickUp cannot create Custom Fields via API, limiting fidelity. |
-| **Fidelity & trust** | A loss report that over-claims is worse than none. Live validation is **not done yet**.                                                                                                                                          |
-| **Business**         | Migration is a one-time event (low repeat usage); small willingness to pay; consulting-shaped demand; support burden; liability if a migration damages data (hence the create-only design).                                      |
-| **Execution**        | One maintainer; connector upkeep is perpetual; breadth is expensive.                                                                                                                                                             |
-| **Legal/brand**      | The working name has not been trademark-cleared ([naming.md](naming.md)).                                                                                                                                                        |
+| Risk                 | Why it matters                                                                                                                                                                                                                                                                |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Competitive**      | ClickUp already has an import report and a 10-day delete, and could add a preview/loss list to its Notion importer; Import2 already offers a free sample migration and could add Notion; AI agents with MCP servers do ad-hoc migrations; the free importer is "good enough". |
+| **API**              | Notion and ClickUp change APIs (Notion changed to data sources in 2025-09-03 and shipped breaking changes again in 2026-03-11; ClickUp Docs is v3). Terms of service or rate limits could limit bulk use. ClickUp cannot create Custom Fields via API, limiting fidelity.     |
+| **Fidelity & trust** | A loss report that over-claims is worse than none. Live validation is **not done yet**.                                                                                                                                                                                       |
+| **Business**         | Migration is a one-time event (low repeat usage); small willingness to pay; consulting-shaped demand; support burden; liability if a migration damages data (hence the create-only design).                                                                                   |
+| **Execution**        | One maintainer; connector upkeep is perpetual; breadth is expensive.                                                                                                                                                                                                          |
+| **Legal/brand**      | The working name has not been trademark-cleared ([naming.md](naming.md)).                                                                                                                                                                                                     |
 
 ## 9. Metrics required before fundraising (or before building a business around this)
 

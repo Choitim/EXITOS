@@ -6,6 +6,8 @@ body:
     attributes:
       value: |
         **Never paste tokens, `.env`, plan files or unredacted reports.** Use `exitos report --redact`.
+        Output from `--verbose` has secrets redacted by ExitOS, but read it before you paste it.
+        Found a security problem? Do not file it here: see `SECURITY.md`.
   - type: textarea
     id: what
     attributes:
@@ -17,14 +19,15 @@ body:
     id: steps
     attributes:
       label: Steps to reproduce
-      description: Ideally with `exitos demo` or a synthetic fixture.
+      description: The commands you ran, in order, and the exit code. Ideally reproducible with `exitos demo` or a synthetic fixture.
     validations:
       required: true
   - type: input
     id: version
     attributes:
       label: ExitOS version
-      description: Output of `exitos --version`
+      description: Output of `exitos --version` (from a source checkout, `pnpm exitos --version`), or the commit hash.
+      placeholder: '0.1.0'
     validations:
       required: true
   - type: input

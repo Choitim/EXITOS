@@ -2,6 +2,11 @@ name: Connector proposal
 description: Propose a new source or destination connector
 labels: [connector]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Please read `docs/connector-sdk.md` first. A connector must be able to give an honest plan (what
+        moves, what changes, what cannot move) and verify the result, or it is not ready to build.
   - type: input
     id: product
     attributes:

@@ -1,8 +1,10 @@
 blank_issues_enabled: false
 contact_links:
+  # TODO(maintainer): turn on "Discussions" and "Private vulnerability reporting" in the repository
+  # settings (see docs/development.md, "Maintainer notes"). Until you do, the two links below lead nowhere.
   - name: Security vulnerability
-    url: https://github.com/OWNER/REPO/security/advisories/new
-    about: Report vulnerabilities privately. Do NOT open a public issue. (Replace OWNER/REPO when the repository is created.)
-  - name: Questions and ideas
-    url: https://github.com/OWNER/REPO/discussions
-    about: Ask how something works or share a migration use case.
+    url: https://github.com/Choitim/EXITOS/security/policy
+    about: Read the security policy and report privately. Do NOT open a public issue for a vulnerability.
+  - name: Questions, ideas and migration use cases
+    url: https://github.com/Choitim/EXITOS/discussions
+    about: Ask how something works, or describe a migration you need. Issues are for bugs, proposals and validation results.

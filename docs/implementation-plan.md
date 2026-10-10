@@ -54,3 +54,12 @@ APIs"** — nothing here has been run against real Notion/ClickUp workspaces by 
 - ✅ Tests pinning the reconciliation branches that must refuse to guess
 - ✅ Scale measured to 100 000 rows under fakes; quadratic work found and removed
 - ⬜ Independent security review · signed releases with provenance · Windows support · attachment transfer · streaming extraction · a support commitment
+
+## Phase 6 — Open-source presentation and onboarding
+
+- ✅ Bilingual README (English, Korean) kept in sync by a test; original logo; images generated from the real product (`pnpm docs:readme-assets`)
+- ✅ First-run experience: `exitos doctor`, Node version and build guards, friendly config and credential errors, PowerShell-aware hints, one outcome vocabulary
+- ✅ Dashboard UX: stage tracker, approval summary, grouped findings, outcome filters, friendly events, loading/empty/error states, contrast and overflow checks
+- ✅ Static browser demo (guided tour and replay of a recorded run), built and tested; a manual-only Pages workflow exists ([online-demo.md](online-demo.md))
+- ✅ Contributor documentation, issue and PR templates, labels file; evidence-based competitive landscape; [open-source launch plan](open-source-launch.md)
+- ⬜ **Publishing it:** enable GitHub Pages and run the workflow, enable Discussions and private vulnerability reporting, create the labels, upload the social preview image, fill in the contact placeholders: all maintainer actions, listed in the launch plan

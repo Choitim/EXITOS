@@ -1,5 +1,41 @@
 # Architecture
 
+## Overview for contributors
+
+The pipeline is `inspect → plan → approve → apply → verify → report`. Everything before `apply` is
+read-only. Where each stage lives in the code:
+
+| Stage                          | Where                                                                                                      |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Read the source                | `SourceConnector` in `packages/connector-notion` (`extract`, then the pure `normalize`)                    |
+| The shared language            | normalized model: Zod schemas in `packages/core/src/schema`                                                |
+| Plan                           | `buildPlan` in `packages/core/src/engine/planner.ts`; the destination's pure `plan()` declares the actions |
+| Seal and approve               | `sealPlan` and `verifyPlanIntegrity` in `engine/plan.ts`; `approveAndCreateRun` in `engine/run.ts`         |
+| Apply                          | `executePlan` in `engine/executor.ts`; the destination's `apply` is the only writer                        |
+| Verify                         | `verifyRun` in `engine/verifier.ts`; the destination's `verify`                                            |
+| Report                         | pure functions in `engine/report.ts`                                                                       |
+| State                          | SQLite `StateStore` in `packages/core/src/state`                                                           |
+| Command line and dashboard API | `apps/cli/src/main.ts` (command tree), `apps/cli/src/commands`, `apps/cli/src/server`                      |
+| Dashboard                      | `apps/web` (React), a static build served by `exitos ui`                                                   |
+
+Four ideas explain most design choices:
+
+1. **The normalized model is the only contract** between a source and a destination; neither knows the other.
+2. **A plan is data**: self-contained, hashed, approved by its id. `apply` executes a plan; it never
+   re-derives one ([ADR 0005](decisions/0005-self-contained-plan-and-approval.md)).
+3. **Safety is structural**: sources are created with a read-only guarded `fetch` that classifies each
+   endpoint and fails closed ([ADR 0006](decisions/0006-endpoint-classified-write-guard.md)); the executor
+   writes a checkpoint before each write and reconciles writes whose outcome is unknown
+   ([ADR 0007](decisions/0007-provenance-marker-and-reconciliation.md)).
+4. **Nothing is dropped silently**: every loss is a finding with a stable code
+   ([finding-codes.md](finding-codes.md)).
+
+Good places to start reading: `buildProgram` in `apps/cli/src/main.ts`, then `buildPlan`, `executePlan`
+and `verifyRun`. The connector interfaces are in section 4 below (the source of truth is
+[`packages/core/src/sdk/types.ts`](../packages/core/src/sdk/types.ts); the walkthrough is
+[connector-sdk.md](connector-sdk.md)). For setup and tests see
+[development.md](development.md) and [testing.md](testing.md).
+
 ## 1. Shape
 
 ```
@@ -26,9 +62,11 @@ learns what the destination is, and vice versa.
 
 ## 2. Packages and dependency rule
 
-`shared ← core ← connector-notion, connector-clickup, example-connector ← demo-workspace ← cli`; `web` depends only on
-`@exitos/core/schema` (types). Rule: **connectors depend on core; core never imports a connector.**
-The CLI is the composition root that registers connectors in a `ConnectorRegistry`.
+`shared ← core ← connector-notion, connector-clickup`. `demo-workspace` (synthetic fixtures) builds on the two
+real connectors, and `cli` depends on core, both connectors and `demo-workspace`. `example-connector` is a
+standalone template that nothing else depends on. `web` imports only types from `@exitos/core` at build
+time. Rule: **connectors depend on core; core never imports a connector.** The CLI is the composition
+root that registers connectors in a `ConnectorRegistry`.
 
 ## 3. Domain model (`@exitos/core/schema`, Zod)
 
@@ -60,23 +98,29 @@ Source and destination are **separate interfaces**; a connector implements only 
 ```ts
 interface SourceConnector<TRaw> {
   manifest: ConnectorManifest; // id, name, version, capabilities
-  discover(ctx): Promise<SourceDiscovery>; // what is reachable with this credential
-  inspect(ctx, selection): Promise<SourceInspection>; // schema + support analysis, no bulk read
-  extract(ctx, selection, opts): Promise<TRaw>; // all I/O; read-only
-  normalize(raw: TRaw, opts): SourceSnapshot; // PURE
+  discover(): Promise<SourceDiscovery>; // what is reachable with this credential
+  inspect(): Promise<SourceInspection>; // schema + support analysis, no bulk read
+  extract(options?: ExtractOptions): Promise<TRaw>; // ALL source I/O; read-only
+  normalize(raw: TRaw): SourceSnapshot; // PURE
 }
 
 interface DestinationConnector {
   manifest: ConnectorManifest;
-  discover(ctx): Promise<DestinationDiscovery>;
-  inspect(ctx, target): Promise<DestinationInspection>; // statuses, fields, members (read-only)
+  discover(): Promise<DestinationDiscovery>;
+  inspect(): Promise<DestinationInspection>; // statuses, fields, members (read-only)
   plan(input: PlanInput): PlanFragment; // PURE: snapshot + config + inspection
-  validate(ctx, plan): Promise<ValidationResult>; // read-only checks, duplicate adoption
-  apply(ctx, action, deps): Promise<ApplyResult>; // one action, throws AmbiguousWriteError when unsure
-  reconcile?(ctx, action, attempt): Promise<ReconcileResult>;
-  verify(ctx, plan, mappings): Promise<VerificationResult>;
+  validate(plan: MigrationPlan): Promise<ValidationResult>; // read-only checks, duplicate adoption
+  apply(action: MigrationAction, context: ApplyContext): Promise<ApplyResult>; // ONE action; throws AmbiguousWriteError when unsure
+  reconcile?(action: MigrationAction, request: ReconcileRequest): Promise<ReconcileResult>;
+  verify(input: VerifyInput): Promise<VerifyOutput>;
 }
 ```
+
+A connector is registered as a **definition** (`SourceConnectorDefinition` / `DestinationConnectorDefinition`): its
+`manifest`, its `network` policy (the hosts its token may reach, and which endpoints are reads), its
+`credentials`, a Zod `configSchema` for its section of `migration.yaml`, and
+`create(context, config, migration)`. The host builds the `ConnectorContext` and hands it to `create`, which is
+why the methods above take no context argument.
 
 `ConnectorContext` carries a guarded `fetch` (ADR 0006), `Logger`, `Clock`, abort `signal`, and
 resolved secrets — connectors never read `process.env` themselves.
@@ -97,7 +141,7 @@ resolved secrets — connectors never read `process.env` themselves.
 
 ## 6. State (`StateStore`, SQLite)
 
-Tables: `runs`, `actions` (the checkpoint table), `id_map` (source key → destination ID, scoped by
+Tables: `plans` (the sealed plan each run was approved from), `runs`, `actions` (the checkpoint table), `id_map` (source key → destination ID, scoped by
 destination; survives across runs and powers duplicate prevention), `events` (append-only,
 secret-free progress log), `verifications`, `meta` (schema version). WAL mode; the dashboard
 server opens the same file read-only.

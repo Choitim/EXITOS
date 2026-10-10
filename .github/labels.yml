@@ -1,0 +1,35 @@
+# The labels this repository's issue templates and contribution guides refer to.
+#
+# This file is a reference: nothing syncs it automatically. Maintainers can create or update the labels
+# with the `gh label create ... --force` commands in docs/development.md ("Maintainer notes").
+# Colours are 6-digit hex without '#', and quoted because an unquoted 008672 would be read as a
+# number. GitHub limits a description to 100 characters.
+
+- name: good first issue
+  color: '7057ff'
+  description: Good for newcomers
+
+- name: help wanted
+  color: '008672'
+  description: Extra attention is needed
+
+- name: bug
+  color: 'd73a4a'
+  description: Something isn't working
+
+- name: enhancement
+  color: 'a2eeef'
+  description: New feature or request
+
+- name: documentation
+  color: '0075ca'
+  description: Improvements or additions to documentation
+
+- name: connector
+  color: '0e8a16'
+  description: A new or changed source or destination connector
+
+# Used by the "Live validation result" issue template.
+- name: validation
+  color: 'fbca04'
+  description: Result of a run against real Notion and ClickUp test workspaces

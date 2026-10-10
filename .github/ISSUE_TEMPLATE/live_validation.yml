@@ -45,3 +45,10 @@ body:
     attributes:
       label: Redacted report
       render: markdown
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: I used test workspaces that I own, and removed tokens, workspace names, ids, URLs and private content from everything I pasted
+          required: true
