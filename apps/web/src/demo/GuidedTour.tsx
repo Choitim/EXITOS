@@ -92,6 +92,7 @@ function WorkspaceStep({ plan, tour, dispatch }: TourProps) {
               <Chip
                 tone="warn"
                 icon="warning"
+                className="chip-wrap"
                 title="Moving pages to ClickUp Docs is experimental."
               >
                 experimental: pages become ClickUp Docs

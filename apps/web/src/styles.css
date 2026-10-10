@@ -264,6 +264,14 @@
   .chip {
     @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold;
   }
+  /* A chip whose text is a phrase, not a one-word label: let it wrap instead of pushing the page wider
+     than a narrow screen (wider system fonts, such as the ones on Linux, made it overflow). */
+  .chip-wrap {
+    @apply max-w-full whitespace-normal rounded-xl;
+  }
+  .chip-wrap > span {
+    overflow-wrap: anywhere;
+  }
   .chip-ok {
     background: var(--ok-bg);
     color: var(--ok-fg);

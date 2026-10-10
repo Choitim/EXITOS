@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { homedir, tmpdir } from 'node:os';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { counts, makeRun, makeState, makeVerification } from './fixtures';
 
@@ -143,7 +143,10 @@ describe('build-demo-state: leaks', () => {
     expect(needles).toContain('/some/work/dir');
     expect(needles).toContain(tmpdir());
     expect(needles).toContain(homedir());
-    expect(needles.some((n) => n.endsWith('exitos') || n.includes('exitos'))).toBe(true);
+    // The repository path, whatever the checkout folder is called ("exitos" on one machine, "EXITOS" on
+    // a CI runner): computed the same way the script does, not guessed from a name.
+    const repoRoot = fileURLToPath(new URL('../../../', import.meta.url)).replace(/[\\/]+$/, '');
+    expect(needles).toContain(repoRoot);
   });
 });
 

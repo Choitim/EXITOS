@@ -949,6 +949,42 @@ test.describe('static online demo: small screens and basics', () => {
     await check('back to step 1');
   });
 
+  test('with a much wider system font (as on Linux) nothing scrolls sideways either, in any step', async ({
+    browser,
+  }) => {
+    // The page's Content-Security-Policy forbids injected styles, on purpose. This one test context
+    // opts out of it only to swap the font for a wide one: the default fonts of a developer's laptop
+    // are narrow, which once hid a 10 px overflow that a Linux CI runner then found.
+    const context = await browser.newContext({
+      viewport: { width: 360, height: 740 },
+      bypassCSP: true,
+    });
+    const wide = await context.newPage();
+    try {
+      await open(wide);
+      await wide.addStyleTag({
+        content:
+          'html, body, button, input, select, textarea { font-family: Verdana, "DejaVu Sans", sans-serif !important; }',
+      });
+      const overflow = (): Promise<number> =>
+        wide.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        );
+      expect(await overflow(), 'first screen').toBeLessThanOrEqual(0);
+      for (let i = 1; i < STEPS.length; i += 1) {
+        await next(wide).click();
+        await expect(position(wide)).toContainText(`Step ${i + 1} of 6`);
+        if (i === 4) {
+          await wide.getByTestId('replay-start').click();
+          await expect(wide.getByTestId('replay-panel')).toHaveAttribute('data-mode', 'done');
+        }
+        expect(await overflow(), `step ${i + 1}`).toBeLessThanOrEqual(0);
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
   test('landmarks, headings, labels and focus follow the basics', async ({ page }) => {
     await open(page);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
