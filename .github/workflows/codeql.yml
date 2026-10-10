@@ -21,7 +21,7 @@ jobs:
       contents: read
       security-events: write # upload results to code scanning
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: github/codeql-action/init@v4
         with:
