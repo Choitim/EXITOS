@@ -26,7 +26,7 @@
   "dependencies": {
     "@exitos/core": "workspace:*",
     "@exitos/shared": "workspace:*",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@exitos/connector-notion": "workspace:*"
