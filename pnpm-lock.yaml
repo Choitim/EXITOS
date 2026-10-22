@@ -298,8 +298,8 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@notionhq/client':
-        specifier: 5.27.0
-        version: 5.27.0
+        specifier: 5.27.1
+        version: 5.27.1
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -435,8 +435,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@notionhq/client@5.27.0':
-    resolution: {integrity: sha512-JnkLtAzSDrEnvtZ8dQ5L4KO+xyL5g01xK5qmKTmhJ5KFY8LWsMyFG033vHCj0mFcsz9thAMjfcAQz/SWxiexag==}
+  '@notionhq/client@5.27.1':
+    resolution: {integrity: sha512-WedYyPNMpQbE4Dz5h7zHTsh03veUGqBzxWyztbIh0tNbgHU+XbDi/jc1KgL3j1p8y06nHLEmGYygntwICxJUNw==}
     engines: {node: '>=18'}
 
   '@oxc-project/types@0.153.0':
@@ -1536,7 +1536,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@notionhq/client@5.27.0': {}
+  '@notionhq/client@5.27.1': {}
 
   '@oxc-project/types@0.153.0': {}
 
