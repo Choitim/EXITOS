@@ -27,6 +27,6 @@
     "@exitos/core": "workspace:*",
     "@exitos/shared": "workspace:*",
     "@notionhq/client": "5.27.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   }
 }
